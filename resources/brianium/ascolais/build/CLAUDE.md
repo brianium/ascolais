@@ -47,6 +47,21 @@ This is a Clojure web application powered by the sandestin effect dispatch ecosy
     └──────────────┘   └──────────────┘   └──────────────┘
 ```
 
+### Router Extension
+
+The production router accepts an `:extra-routes` parameter, allowing dev to extend it without duplication:
+
+```clojure
+;; Production
+::router {:dispatch (ig/ref ::dispatch)
+          :routes (routes/routes)}
+
+;; Dev adds tsain routes
+::app/router {:dispatch (ig/ref ::app/dispatch)
+              :routes (routes/routes)
+              :extra-routes (tsain/routes)}
+```
+
 ## Technology Stack
 
 - **Clojure 1.12** with deps.edn

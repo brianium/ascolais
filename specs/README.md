@@ -6,7 +6,8 @@ This directory contains living specifications for ascolais features and concepts
 
 | Priority | Spec | Reason |
 |----------|------|--------|
-| 1 | [006-unify-router-configuration](./006-unify-router-configuration.md) | Eliminates router duplication, adds static file serving to production |
+| 1 | [002-layout-persistent-connection](./002-layout-persistent-connection.md) | Update layout to use twk/CDN-url and demonstrate persistent SSE connection pattern |
+| 2 | [003-document-kaiin-vs-manual-routes](./003-document-kaiin-vs-manual-routes.md) | Document when to use kaiin routes vs manual handlers for persistent SSE |
 
 ## Spec Index
 
@@ -17,6 +18,6 @@ This directory contains living specifications for ascolais features and concepts
 | [003-document-kaiin-vs-manual-routes](./003-document-kaiin-vs-manual-routes.md) | Draft | Document when to use kaiin routes vs manual handlers for persistent SSE |
 | [004-move-public-to-resources](./004-move-public-to-resources.md) | Complete | Move dev/resources/public to resources/public for standard asset location |
 | [005-move-chassis-aliases-to-production](./005-move-chassis-aliases-to-production.md) | Complete | Move chassis aliases from sandbox.ui to production namespace |
-| [006-unify-router-configuration](./006-unify-router-configuration.md) | Draft | Unify router config so dev extends production via :extra-routes parameter |
+| [006-unify-router-configuration](./006-unify-router-configuration.md) | Complete | Unify router config so dev extends production via :extra-routes parameter |
 
 Status values: Draft, Active, Complete, Archived

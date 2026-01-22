@@ -4,6 +4,7 @@
   (:require [{{top/ns}}.config :as app]
             [{{top/ns}}.routes :as routes]
             [ascolais.tsain :as tsain]
+            [ascolais.tsain.routes :as tsain.routes]
             [integrant.core :as ig]
             [nextjournal.beholder :as beholder]))
 
@@ -15,6 +16,14 @@
   "Tsain sandbox registry."
   [_opts]
   (tsain/registry))
+
+(defn tsain-routes
+  "Tsain sandbox routes.
+   Requires dispatch and tsain-registry to compute routes."
+  [{:keys [dispatch tsain-registry]}]
+  (let [state (::tsain/state tsain-registry)
+        config (::tsain/config tsain-registry)]
+    (tsain.routes/routes dispatch state config)))
 
 (defn file-watcher
   "CSS hot-reload file watcher."
@@ -48,10 +57,14 @@
                      :registries [(ig/ref :{{top/ns}}.fx.example/registry)
                                   (ig/ref ::tsain-registry)]}
 
+     ;; Tsain sandbox routes
+     ::tsain-routes {:dispatch (ig/ref ::app/dispatch)
+                     :tsain-registry (ig/ref ::tsain-registry)}
+
      ;; Extend production router with tsain routes
      ::app/router {:dispatch (ig/ref ::app/dispatch)
                    :routes (routes/routes)
-                   :extra-routes (tsain/routes)}
+                   :extra-routes (ig/ref ::tsain-routes)}
 
      ;; File watcher for CSS hot-reload
      ::file-watcher {:dispatch (ig/ref ::app/dispatch)

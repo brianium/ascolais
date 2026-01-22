@@ -56,10 +56,13 @@ The production router accepts an `:extra-routes` parameter, allowing dev to exte
 ::router {:dispatch (ig/ref ::dispatch)
           :routes (routes/routes)}
 
-;; Dev adds tsain routes
+;; Dev adds tsain sandbox routes via component
+::tsain-routes {:dispatch (ig/ref ::app/dispatch)
+                :tsain-registry (ig/ref ::tsain-registry)}
+
 ::app/router {:dispatch (ig/ref ::app/dispatch)
               :routes (routes/routes)
-              :extra-routes (tsain/routes)}
+              :extra-routes (ig/ref ::tsain-routes)}
 ```
 
 ## Technology Stack

@@ -70,11 +70,11 @@ dev/src/clj/
 
 resources/
   migrations/          # SQL migration files
-
-dev/resources/
-  components.edn       # Tsain component library
   public/
     styles.css         # Component CSS (hot-reloadable)
+
+dev/resources/
+  components.edn       # Tsain component library (dev-only)
 ```
 
 ## Claude Code Integration

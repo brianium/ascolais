@@ -1,4 +1,4 @@
 {:ui-namespace sandbox.ui
  :components-file "dev/resources/components.edn"
- :stylesheet "dev/resources/public/styles.css"
+ :stylesheet "resources/public/styles.css"
  :port 3000}

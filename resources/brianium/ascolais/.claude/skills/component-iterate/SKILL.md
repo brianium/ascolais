@@ -15,7 +15,7 @@ Read `tsain.edn` at project root for file locations:
 ;; tsain.edn
 {:ui-namespace sandbox.ui          ;; Where chassis aliases live
  :components-file "dev/resources/components.edn"  ;; Component library persistence
- :stylesheet "dev/resources/public/styles.css"  ;; CSS for hot reload
+ :stylesheet "resources/public/styles.css"  ;; CSS for hot reload
  :port 3000}
 ```
 

@@ -1,6 +1,6 @@
 # 004: Move dev/resources/public to resources/public
 
-**Status:** Active
+**Status:** Complete
 
 ## Summary
 

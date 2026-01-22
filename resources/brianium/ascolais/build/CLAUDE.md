@@ -176,11 +176,11 @@ dev/src/clj/
 
 resources/
   migrations/            # SQL migration files
+  public/
+    styles.css           # Component CSS (hot-reloadable)
 
 dev/resources/
-  components.edn         # Tsain component library
-  public/
-  styles.css             # Component CSS (hot-reloadable)
+  components.edn         # Tsain component library (dev-only)
 
 test/src/clj/            # Test files
 ```
@@ -564,7 +564,7 @@ When adding new dependencies in a REPL-connected environment:
 ### Development Workflow
 
 1. **Exploration phase** - Use inline styles for rapid iteration
-2. **Before commit** - Extract all styles to `dev/resources/public/styles.css`
+2. **Before commit** - Extract all styles to `resources/public/styles.css`
 3. **Commit** - Component hiccup should use CSS classes, not inline styles
 
 ### Naming Convention (BEM-like)

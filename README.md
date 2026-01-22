@@ -8,7 +8,7 @@ Generate a new project:
 
 ```bash
 # Using a published tag
-clojure -Sdeps '{:deps {io.github.brianium/ascolais {:git/tag "v0.1.0" :git/sha "acefef2"}}}' \
+clojure -Sdeps '{:deps {io.github.brianium/ascolais {:git/tag "v0.2.0" :git/sha "54ca1c5"}}}' \
   -Tnew create :template brianium/ascolais :name myorg/myapp
 
 # From local checkout

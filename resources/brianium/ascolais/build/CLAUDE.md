@@ -170,9 +170,6 @@ dev/src/clj/
   user.clj               # REPL initialization
   dev.clj                # Dev namespace
   dev/config.clj         # Dev integrant config
-  sandbox/
-    ui.clj               # Chassis alias definitions
-    views.clj            # Sandbox view re-exports
 
 resources/
   migrations/            # SQL migration files
@@ -590,12 +587,12 @@ Use CSS custom properties:
 
 ## Chassis Alias Conventions
 
-Component structure lives in `dev/src/clj/sandbox/ui.clj` as chassis aliases.
+Component structure lives in `src/clj/{{top/file}}/views/components.clj` as chassis aliases.
 
 ### Alias-First Development
 
 ```clojure
-;; 1. Define structure in sandbox/ui.clj
+;; 1. Define structure in views/components.clj
 (defmethod c/resolve-alias ::my-card
   [_ attrs _]
   (let [{:my-card/keys [title subtitle]} attrs]
@@ -604,7 +601,7 @@ Component structure lives in `dev/src/clj/sandbox/ui.clj` as chassis aliases.
      [:p.my-card-subtitle subtitle]]))
 
 ;; 2. Use in dev/resources/components.edn with lean config
-[:sandbox.ui/my-card
+[:{{top/ns}}.views.components/my-card
  {:my-card/title "Hello World"
   :my-card/subtitle "A description"}]
 ```
@@ -614,7 +611,7 @@ Component structure lives in `dev/src/clj/sandbox/ui.clj` as chassis aliases.
 Chassis elides namespaced attributes from HTML. Use for config props:
 
 ```clojure
-[:sandbox.ui/game-card
+[:{{top/ns}}.views.components/game-card
  {:game-card/title "Title"     ;; Config (elided)
   :data-on:click "..."         ;; HTML attr (kept)
   :class "highlighted"}]       ;; HTML attr (kept)

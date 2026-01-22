@@ -1,6 +1,7 @@
 (ns {{top/ns}}.views.layout
   "Base layout and page shells."
-  (:require [dev.onionpancakes.chassis.core :as c]))
+  (:require [dev.onionpancakes.chassis.core :as c]
+            [{{top/ns}}.views.components]))
 
 (defn base-layout
   "Base HTML layout with Datastar."

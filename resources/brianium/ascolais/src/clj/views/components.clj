@@ -1,5 +1,5 @@
-(ns sandbox.ui
-  "Chassis alias definitions for UI components.
+(ns {{top/ns}}.views.components
+  "Chassis alias definitions for reusable UI components.
 
    Define component structure here, use namespaced attributes for config props:
    - Namespaced attrs (e.g., :card/title) are elided from HTML output

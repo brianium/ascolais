@@ -59,14 +59,14 @@ src/clj/{{top/file}}/
   config.clj           # Integrant system configuration
   routes.clj           # Ring route handlers
   fx/                  # Effect registries (one per domain)
+  views/
+    layout.clj         # Base layout
+    components.clj     # Chassis alias definitions
 
 dev/src/clj/
   user.clj             # REPL initialization
   dev.clj              # Dev namespace (start/stop/dispatch)
   dev/config.clj       # Dev system config (extends app)
-  sandbox/
-    ui.clj             # Chassis alias definitions
-    views.clj          # Sandbox view re-exports
 
 resources/
   migrations/          # SQL migration files

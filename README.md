@@ -207,7 +207,7 @@ Generated projects are optimized for Claude-assisted development:
 
 ## Background
 
-This template emerged from the [tsain](https://github.com/brianium/tsain) project's development, which needed a way to scaffold new applications using the sandestin ecosystem. The name "ascolais" comes from the Gentlemen Bastard series by Scott Lynch, following the naming convention of sibling libraries.
+This template emerged from the [tsain](https://github.com/brianium/tsain) project's development, which needed a way to scaffold new applications using the sandestin ecosystem. The name "ascolais" comes from Jack Vance's *The Dying Earth* series, following the naming convention of sibling libraries.
 
 ## License
 

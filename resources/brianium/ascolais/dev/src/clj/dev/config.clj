@@ -82,4 +82,4 @@
 
      ;; File watcher for CSS hot-reload
      ::file-watcher {:dispatch (ig/ref ::app/dispatch)
-                     :paths ["dev/resources/public"]}}))
+                     :paths ["resources/public"]}}))

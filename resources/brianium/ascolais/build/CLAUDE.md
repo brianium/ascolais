@@ -175,10 +175,11 @@ dev/src/clj/
     views.clj            # Sandbox view re-exports
 
 resources/
-  components.edn         # Tsain component library
   migrations/            # SQL migration files
 
-dev/resources/public/
+dev/resources/
+  components.edn         # Tsain component library
+  public/
   styles.css             # Component CSS (hot-reloadable)
 
 test/src/clj/            # Test files
@@ -602,7 +603,7 @@ Component structure lives in `dev/src/clj/sandbox/ui.clj` as chassis aliases.
      [:h3.my-card-title title]
      [:p.my-card-subtitle subtitle]]))
 
-;; 2. Use in components.edn with lean config
+;; 2. Use in dev/resources/components.edn with lean config
 [:sandbox.ui/my-card
  {:my-card/title "Hello World"
   :my-card/subtitle "A description"}]

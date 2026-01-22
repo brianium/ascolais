@@ -51,8 +51,10 @@ myorg-myapp/
 │   └── sandbox/                # Component development
 │
 ├── resources/
-│   ├── components.edn          # Tsain component library
 │   └── migrations/             # SQL migration files
+│
+├── dev/resources/
+│   └── components.edn          # Tsain component library
 │
 └── .claude/
     ├── settings.json           # Paren repair hooks

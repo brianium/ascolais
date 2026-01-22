@@ -69,11 +69,12 @@ dev/src/clj/
     views.clj          # Sandbox view re-exports
 
 resources/
-  components.edn       # Tsain component library
   migrations/          # SQL migration files
 
-dev/resources/public/
-  styles.css           # Component CSS (hot-reloadable)
+dev/resources/
+  components.edn       # Tsain component library
+  public/
+    styles.css         # Component CSS (hot-reloadable)
 ```
 
 ## Claude Code Integration

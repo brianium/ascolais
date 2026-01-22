@@ -77,10 +77,10 @@ The production router accepts an `:extra-routes` parameter, allowing dev to exte
 
 ```bash
 # Start PostgreSQL
-docker-compose up -d
+docker compose up -d
 
 # Verify database is running
-docker-compose ps
+docker compose ps
 ```
 
 ### Starting the REPL
@@ -165,9 +165,9 @@ Migrations use ragtime with SQL files in `resources/migrations/`.
 ### Docker Commands
 
 ```bash
-docker-compose up -d      # Start PostgreSQL
-docker-compose down       # Stop PostgreSQL
-docker-compose down -v    # Reset database (delete volume)
+docker compose up -d      # Start PostgreSQL
+docker compose down       # Stop PostgreSQL
+docker compose down -v    # Reset database (delete volume)
 ```
 
 ---

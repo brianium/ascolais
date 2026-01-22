@@ -66,29 +66,11 @@
   (http-kit/run-server handler {:port port}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Integrant Methods
+;; Integrant Halt Methods
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defmethod ig/init-key ::datasource [_ opts]
-  (datasource opts))
 
 (defmethod ig/halt-key! ::datasource [_ ds]
   (.close ^HikariDataSource ds))
-
-(defmethod ig/init-key ::store [_ opts]
-  (store opts))
-
-(defmethod ig/init-key ::dispatch [_ opts]
-  (dispatch opts))
-
-(defmethod ig/init-key ::router [_ opts]
-  (router opts))
-
-(defmethod ig/init-key ::handler [_ opts]
-  (handler opts))
-
-(defmethod ig/init-key ::server [_ opts]
-  (server opts))
 
 (defmethod ig/halt-key! ::server [_ stop-fn]
   (stop-fn))

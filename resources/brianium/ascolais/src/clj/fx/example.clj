@@ -2,8 +2,7 @@
   "Example domain effects."
   (:require [ascolais.sandestin :as s]
             [ascolais.twk :as twk]
-            [ascolais.kaiin :as kaiin]
-            [integrant.core :as ig]))
+            [ascolais.kaiin :as kaiin]))
 
 (defn registry
   "Example effects registry."
@@ -34,9 +33,3 @@
        (println "[{{name}}]" message)
        nil)}}})
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Integrant
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defmethod ig/init-key ::registry [_ opts]
-  (registry opts))

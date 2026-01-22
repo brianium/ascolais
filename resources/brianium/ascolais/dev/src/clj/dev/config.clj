@@ -31,7 +31,7 @@
       (dispatch [[::tsain/reload-css]]))
     (first paths)))
 
-(defn dev-router
+(defn router
   "Development router with tsain routes."
   [{:keys [dispatch routes]}]
   (rr/router
@@ -42,20 +42,11 @@
                          [(twk/with-datastar ds-hk/->sse-response dispatch)]]}}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Integrant Methods
+;; Integrant Halt Methods
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defmethod ig/init-key ::tsain-registry [_ opts]
-  (tsain-registry opts))
-
-(defmethod ig/init-key ::file-watcher [_ opts]
-  (file-watcher opts))
 
 (defmethod ig/halt-key! ::file-watcher [_ watcher]
   (beholder/stop watcher))
-
-(defmethod ig/init-key ::router [_ opts]
-  (dev-router opts))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Dev Configuration

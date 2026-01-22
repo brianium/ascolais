@@ -103,7 +103,7 @@
                  :password "postgres"}
 
    ::store {:type :caffeine
-            :duration-ms 30000}
+            :duration-ms 1800000}
 
    ::example/registry {:datasource (ig/ref ::datasource)}
 

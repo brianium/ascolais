@@ -87,7 +87,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def config
-  {::datasource {:jdbc-url "jdbc:postgresql://localhost:5432/{{raw-name}}_dev"
+  {::datasource {:jdbc-url "jdbc:postgresql://localhost:5432/{{main}}_dev"
                  :username "postgres"
                  :password "postgres"}
 

@@ -1,4 +1,4 @@
-{:ui-namespace {{top/ns}} .views.components
+{:ui-namespace {{top/ns}}.views.components
  :components-file "dev/resources/components.edn"
  :stylesheet "resources/public/styles.css"
  :port 3000}

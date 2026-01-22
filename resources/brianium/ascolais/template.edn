@@ -1,8 +1,6 @@
 {:description "Sandestin-powered web application with Datastar frontend, PostgreSQL, and Claude Code integration"
  :transform [["build" ""]
-             ["src/clj" "src/clj/{{top/file}}" {"core.clj" "{{main/file}}.clj"
-                                                "config.clj" "config.clj"
-                                                "routes.clj" "routes.clj"} :only]
+             ["src/clj" "src/clj/{{top/file}}" {"core.clj" "{{main/file}}.clj"}]
              ["dev" "dev"]
              ["test/src/clj" "test/src/clj/{{top/file}}" {"core_test.clj" "{{main/file}}_test.clj"} :only]
              ["test/resources" "test/resources"]

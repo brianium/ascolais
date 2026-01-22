@@ -1,6 +1,6 @@
 # 003: Document Kaiin vs Manual Routes
 
-**Status:** Draft
+**Status:** Complete
 
 ## Summary
 

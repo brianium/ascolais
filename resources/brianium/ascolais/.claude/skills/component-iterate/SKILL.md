@@ -13,9 +13,9 @@ Read `tsain.edn` at project root for file locations:
 
 ```clojure
 ;; tsain.edn
-{:ui-namespace sandbox.ui          ;; Where chassis aliases live
+{:ui-namespace {{top/ns}}.views.components  ;; Where chassis aliases live
  :components-file "dev/resources/components.edn"  ;; Component library persistence
- :stylesheet "dev/resources/public/styles.css"  ;; CSS for hot reload
+ :stylesheet "resources/public/styles.css"  ;; CSS for hot reload
  :port 3000}
 ```
 
@@ -59,7 +59,7 @@ The `:ui-namespace` tells you where to add aliases. The `:stylesheet` tells you 
 
 ### Step 1: Define the Chassis Alias (Required First Step)
 
-Before iterating on visuals, define the component structure in the UI namespace (from `:ui-namespace`).
+Before iterating on visuals, define the component structure in the components namespace (from `:ui-namespace`). This is a production namespace, so aliases you define here can be used directly in your application views.
 
 **Key conventions:**
 - **Namespaced attrs** (`:game-card/title`) = config props (elided from HTML output)
@@ -67,7 +67,7 @@ Before iterating on visuals, define the component structure in the UI namespace 
 - **Namespace by component name** for self-documenting code
 
 ```clojure
-;; In the UI namespace
+;; In views/components.clj
 (defmethod c/resolve-alias ::my-component
   [_ attrs _]
   (let [{:my-component/keys [title subtitle icon]} attrs]
@@ -90,7 +90,7 @@ Use the alias with config props. The namespace is from `:ui-namespace`:
 
 ```bash
 clj-nrepl-eval -p 7888 "(dispatch [[::tsain/preview
-  [:sandbox.ui/my-component
+  [:{{top/ns}}.views.components/my-component
    {:my-component/title \"Hello World\"
     :my-component/subtitle \"A simple example\"
     :my-component/icon \"🎉\"}]]])"
@@ -111,13 +111,13 @@ clj-nrepl-eval -p 7888 "(dispatch [[::tsain/commit :my-component
    :examples
    [{:label \"Dark\"
      :hiccup [:div {:style \"padding: 40px;\"}
-              [:sandbox.ui/my-component
+              [:{{top/ns}}.views.components/my-component
                {:my-component/title \"Hello World\"
                 :my-component/subtitle \"A simple example\"
                 :my-component/icon \"🎉\"}]]}
     {:label \"Light\"
      :hiccup [:div.theme-light {:style \"padding: 40px; background: #f0f4f8;\"}
-              [:sandbox.ui/my-component
+              [:{{top/ns}}.views.components/my-component
                {:my-component/title \"Hello World\"
                 :my-component/subtitle \"A simple example\"
                 :my-component/icon \"🎉\"}]]}]}]])"
@@ -128,7 +128,7 @@ clj-nrepl-eval -p 7888 "(dispatch [[::tsain/commit :my-component
 ## Config Props vs HTML Attrs
 
 ```clojure
-[:sandbox.ui/game-card
+[:{{top/ns}}.views.components/game-card
  {;; Config props (namespaced) - elided from HTML output
   :game-card/title "Neural Phantom"
   :game-card/attack "3"
@@ -201,7 +201,7 @@ clj-nrepl-eval -p 7888 "(reload)"
 
 # 4. Preview with config
 clj-nrepl-eval -p 7888 "(dispatch [[::tsain/preview
-  [:sandbox.ui/status-badge
+  [:{{top/ns}}.views.components/status-badge
    {:status-badge/label \"Online\"
     :status-badge/status :active}]]])"
 
@@ -215,10 +215,10 @@ clj-nrepl-eval -p 7888 "(dispatch [[::tsain/commit :status-badge
    :examples
    [{:label \"Dark\"
      :hiccup [:div {:style \"padding: 20px;\"}
-              [:sandbox.ui/status-badge {:status-badge/label \"Online\" :status-badge/status :active}]]}
+              [:{{top/ns}}.views.components/status-badge {:status-badge/label \"Online\" :status-badge/status :active}]]}
     {:label \"Light\"
      :hiccup [:div.theme-light {:style \"padding: 20px; background: #f0f4f8;\"}
-              [:sandbox.ui/status-badge {:status-badge/label \"Online\" :status-badge/status :active}]]}]}]])"
+              [:{{top/ns}}.views.components/status-badge {:status-badge/label \"Online\" :status-badge/status :active}]]}]}]])"
 ```
 
 ## Dynamic Components with Datastar
@@ -235,7 +235,7 @@ For interactive components, Datastar attrs pass through to HTML:
      [:div.accordion-content {:data-class:open "$open"} content]]))
 
 ;; Usage with Datastar attrs
-[:sandbox.ui/accordion
+[:{{top/ns}}.views.components/accordion
  {:accordion/title "Click to expand"
   :data-signals:open "false"}
  [:p "Hidden content"]]
@@ -264,9 +264,9 @@ Use `.theme-light` wrapper class - CSS custom properties handle the rest:
 
 ```clojure
 ;; Dark (default)
-[:sandbox.ui/game-card {:game-card/title "Card" ...}]
+[:{{top/ns}}.views.components/game-card {:game-card/title "Card" ...}]
 
 ;; Light
 [:div.theme-light
- [:sandbox.ui/game-card {:game-card/title "Card" ...}]]
+ [:{{top/ns}}.views.components/game-card {:game-card/title "Card" ...}]]
 ```

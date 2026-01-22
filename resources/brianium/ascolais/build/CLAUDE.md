@@ -47,6 +47,21 @@ This is a Clojure web application powered by the sandestin effect dispatch ecosy
     └──────────────┘   └──────────────┘   └──────────────┘
 ```
 
+### Router Extension
+
+The production router accepts an `:extra-routes` parameter, allowing dev to extend it without duplication:
+
+```clojure
+;; Production
+::router {:dispatch (ig/ref ::dispatch)
+          :routes (routes/routes)}
+
+;; Dev adds tsain routes
+::app/router {:dispatch (ig/ref ::app/dispatch)
+              :routes (routes/routes)
+              :extra-routes (tsain/routes)}
+```
+
 ## Technology Stack
 
 - **Clojure 1.12** with deps.edn
@@ -170,17 +185,14 @@ dev/src/clj/
   user.clj               # REPL initialization
   dev.clj                # Dev namespace
   dev/config.clj         # Dev integrant config
-  sandbox/
-    ui.clj               # Chassis alias definitions
-    views.clj            # Sandbox view re-exports
 
 resources/
   migrations/            # SQL migration files
+  public/
+    styles.css           # Component CSS (hot-reloadable)
 
 dev/resources/
-  components.edn         # Tsain component library
-  public/
-  styles.css             # Component CSS (hot-reloadable)
+  components.edn         # Tsain component library (dev-only)
 
 test/src/clj/            # Test files
 ```
@@ -505,6 +517,49 @@ twk/pm-before  twk/pm-after  twk/pm-remove
     {:data {:middleware [(twk/with-datastar adapter dispatch)]}}))
 ```
 
+### Kaiin vs Manual Routes
+
+**Use Kaiin** for stateless request/response handlers:
+- Form submissions
+- API endpoints that return data
+- Actions that dispatch effects and close
+
+Kaiin routes:
+1. Parse signals and path params from request
+2. Dispatch effects via sandestin
+3. Relay effects to sfere targets (if `::kaiin/target` specified)
+4. Close the connection
+
+**Use Manual Handlers** for persistent SSE connections:
+- Real-time updates
+- Live dashboards
+- Chat/collaboration features
+- Any page that receives server-pushed updates
+
+Manual SSE handlers:
+1. Return `::sfere/key` to store the connection
+2. Return `::twk/fx` for initial effects to send
+3. Connection stays open for broadcasts
+
+Example manual SSE handler:
+
+```clojure
+(defn sse-connect
+  "Establish persistent SSE connection."
+  [{:keys [signals]}]
+  (let [session-id (:sessionId signals)]
+    {::sfere/key [:page "home" session-id]
+     ::twk/fx [[::twk/patch-signals {:connected true}]]}))
+```
+
+Route definition (NOT using kaiin metadata):
+
+```clojure
+["/sse/home" {:get {:handler sse-connect}}]
+```
+
+Kaiin's `::kaiin/target` broadcasts to stored connections but does NOT keep the originating connection open.
+
 ---
 
 ## Effect Organization
@@ -564,7 +619,7 @@ When adding new dependencies in a REPL-connected environment:
 ### Development Workflow
 
 1. **Exploration phase** - Use inline styles for rapid iteration
-2. **Before commit** - Extract all styles to `dev/resources/public/styles.css`
+2. **Before commit** - Extract all styles to `resources/public/styles.css`
 3. **Commit** - Component hiccup should use CSS classes, not inline styles
 
 ### Naming Convention (BEM-like)
@@ -590,12 +645,12 @@ Use CSS custom properties:
 
 ## Chassis Alias Conventions
 
-Component structure lives in `dev/src/clj/sandbox/ui.clj` as chassis aliases.
+Component structure lives in `src/clj/{{top/file}}/views/components.clj` as chassis aliases.
 
 ### Alias-First Development
 
 ```clojure
-;; 1. Define structure in sandbox/ui.clj
+;; 1. Define structure in views/components.clj
 (defmethod c/resolve-alias ::my-card
   [_ attrs _]
   (let [{:my-card/keys [title subtitle]} attrs]
@@ -604,7 +659,7 @@ Component structure lives in `dev/src/clj/sandbox/ui.clj` as chassis aliases.
      [:p.my-card-subtitle subtitle]]))
 
 ;; 2. Use in dev/resources/components.edn with lean config
-[:sandbox.ui/my-card
+[:{{top/ns}}.views.components/my-card
  {:my-card/title "Hello World"
   :my-card/subtitle "A description"}]
 ```
@@ -614,7 +669,7 @@ Component structure lives in `dev/src/clj/sandbox/ui.clj` as chassis aliases.
 Chassis elides namespaced attributes from HTML. Use for config props:
 
 ```clojure
-[:sandbox.ui/game-card
+[:{{top/ns}}.views.components/game-card
  {:game-card/title "Title"     ;; Config (elided)
   :data-on:click "..."         ;; HTML attr (kept)
   :class "highlighted"}]       ;; HTML attr (kept)

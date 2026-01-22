@@ -1,6 +1,6 @@
 # 006: Unify Router Configuration
 
-**Status:** Draft
+**Status:** Complete
 
 ## Summary
 

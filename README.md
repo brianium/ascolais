@@ -196,7 +196,7 @@ The tsain sandbox at `localhost:3000/sandbox` provides a browser-based preview f
 (dispatch [[::tsain/commit :my-card {:description "Card component"}]])
 ```
 
-CSS hot-reloads automatically when editing `dev/resources/public/styles.css`.
+CSS hot-reloads automatically when editing `resources/public/styles.css`.
 
 ## Claude Code Integration
 

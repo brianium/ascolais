@@ -11,6 +11,7 @@
             [reitit.ring :as rr]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+            [ring.middleware.resource :refer [wrap-resource]]
             [starfederation.datastar.clojure.adapter.http-kit :as ds-hk]
             [org.httpkit.server :as http-kit])
   (:import [com.zaxxer.hikari HikariDataSource HikariConfig]))
@@ -44,12 +45,18 @@
           registries)))
 
 (defn router
-  "Create reitit router with middleware."
-  [{:keys [dispatch routes]}]
+  "Create reitit router with middleware.
+
+   Options:
+   - :dispatch - sandestin dispatch fn (required)
+   - :routes - base application routes (required)
+   - :extra-routes - additional routes prepended before kaiin routes (optional)"
+  [{:keys [dispatch routes extra-routes]}]
   (rr/router
-    (into routes (kaiin/routes dispatch))
+    (into routes (concat extra-routes (kaiin/routes dispatch)))
     {:data {:middleware [[wrap-params]
                          [wrap-keyword-params]
+                         [wrap-resource "public"]
                          [(twk/with-datastar ds-hk/->sse-response dispatch)]]}}))
 
 (defn handler

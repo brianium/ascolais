@@ -1,6 +1,6 @@
 # 002: Layout with Persistent Connection Pattern
 
-**Status:** Draft
+**Status:** Complete
 
 ## Summary
 

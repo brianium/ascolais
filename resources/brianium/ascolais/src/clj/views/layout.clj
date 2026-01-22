@@ -1,6 +1,7 @@
 (ns {{top/ns}}.views.layout
   "Base layout and page shells."
   (:require [dev.onionpancakes.chassis.core :as c]
+            [ascolais.twk :as twk]
             [{{top/ns}}.views.components]))
 
 (defn base-layout
@@ -12,8 +13,7 @@
      [:meta {:charset "utf-8"}]
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      [:title title]
-     [:script {:type "module"
-               :src "https://cdn.jsdelivr.net/npm/@starfederation/datastar@1.0.0-rc.2/dist/datastar.min.js"}]
+     [:script {:type "module" :src twk/CDN-url}]
      [:style (c/raw "
        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
        .greeting { padding: 1rem; background: #f0f0f0; border-radius: 8px; margin-top: 1rem; }
@@ -34,18 +34,20 @@
 (defn home-page
   "Home page view."
   []
-  (base-layout {:title "{{name}}"}
-    [:h1 "Welcome to {{name}}"]
-    [:p "A Clojure web application powered by the sandestin effect ecosystem."]
+  (let [session-id (str (random-uuid))]
+    (base-layout {:title "{{name}}"}
+      [:div {:data-signals (str "{name: '', sessionId: '" session-id "'}")
+             :data-init "@get('/sse/home')"}
+       [:h1 "Welcome to {{name}}"]
+       [:p "A Clojure web application powered by the sandestin effect ecosystem."]
 
-    [:div {:data-signals "{name: ''}"}
-     [:form {:data-on:submit__prevent "@post('/api/greet')"}
-      [:input {:type "text"
-               :placeholder "Enter your name"
-               :data-bind:name true}]
-      [:button {:type "submit"} "Greet"]]
+       [:form {:data-on:submit__prevent "@post('/api/greet')"}
+        [:input {:type "text"
+                 :placeholder "Enter your name"
+                 :data-bind:name true}]
+        [:button {:type "submit"} "Greet"]]
 
-     [:div#greeting]]))
+       [:div#greeting]])))
 
 (defn about-page
   "About page view."

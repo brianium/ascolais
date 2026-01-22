@@ -517,6 +517,49 @@ twk/pm-before  twk/pm-after  twk/pm-remove
     {:data {:middleware [(twk/with-datastar adapter dispatch)]}}))
 ```
 
+### Kaiin vs Manual Routes
+
+**Use Kaiin** for stateless request/response handlers:
+- Form submissions
+- API endpoints that return data
+- Actions that dispatch effects and close
+
+Kaiin routes:
+1. Parse signals and path params from request
+2. Dispatch effects via sandestin
+3. Relay effects to sfere targets (if `::kaiin/target` specified)
+4. Close the connection
+
+**Use Manual Handlers** for persistent SSE connections:
+- Real-time updates
+- Live dashboards
+- Chat/collaboration features
+- Any page that receives server-pushed updates
+
+Manual SSE handlers:
+1. Return `::sfere/key` to store the connection
+2. Return `::twk/fx` for initial effects to send
+3. Connection stays open for broadcasts
+
+Example manual SSE handler:
+
+```clojure
+(defn sse-connect
+  "Establish persistent SSE connection."
+  [{:keys [signals]}]
+  (let [session-id (:sessionId signals)]
+    {::sfere/key [:page "home" session-id]
+     ::twk/fx [[::twk/patch-signals {:connected true}]]}))
+```
+
+Route definition (NOT using kaiin metadata):
+
+```clojure
+["/sse/home" {:get {:handler sse-connect}}]
+```
+
+Kaiin's `::kaiin/target` broadcasts to stored connections but does NOT keep the originating connection open.
+
 ---
 
 ## Effect Organization

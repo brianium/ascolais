@@ -43,15 +43,19 @@ myorg-myapp/
 │   ├── core.clj                # Application entry point
 │   ├── config.clj              # Integrant system configuration
 │   ├── routes.clj              # Ring route handlers
-│   └── fx/                     # Effect registries (one per domain)
+│   ├── fx/                     # Effect registries (one per domain)
+│   └── views/                  # Hiccup view functions
+│       ├── layout.clj          # Page layout with Datastar setup
+│       └── components.clj      # Reusable UI components
 │
 ├── dev/src/clj/
 │   ├── user.clj                # REPL initialization
 │   ├── dev.clj                 # Dev namespace (start/stop/reload)
-│   └── sandbox/                # Component development
+│   └── dev/config.clj          # Dev-specific Integrant config
 │
 ├── resources/
-│   └── migrations/             # SQL migration files
+│   ├── migrations/             # SQL migration files
+│   └── public/styles.css       # Application styles
 │
 ├── dev/resources/
 │   └── components.edn          # Tsain component library
@@ -160,7 +164,7 @@ After generating a project:
 cd myorg-myapp
 
 # Start PostgreSQL
-docker-compose up -d
+docker compose up -d
 
 # Start REPL
 clj -M:dev

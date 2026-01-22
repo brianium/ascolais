@@ -1,0 +1,11 @@
+;; deps-new template library for sandestin-powered web applications
+;;
+;; Usage:
+;; clojure -Sdeps '{:deps {io.github.brianium/ascolais {:local/root "."}}}' \
+;;   -Tnew create :template brianium/ascolais :name myorg/myapp
+;;
+;; Or with git:
+;; clojure -Sdeps '{:deps {io.github.brianium/ascolais {:git/tag "v0.1.0" :git/sha "..."}}}' \
+;;   -Tnew create :template brianium/ascolais :name myorg/myapp
+
+{:paths ["resources"]}

@@ -1,0 +1,6 @@
+{:components
+ {:example-card
+  {:description "Example card component"
+   :hiccup [:sandbox.ui/example-card
+            {:example-card/title "Example Title"
+             :example-card/description "An example card component."}]}}}

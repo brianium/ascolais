@@ -1,0 +1,79 @@
+/* Component Styles
+   Hot-reloadable via tsain file watcher.
+
+   Naming convention (BEM-like):
+   - .component-name       - Block (main container)
+   - .component-name-element - Element within block
+   - .component-name--modifier - Modifier variant
+*/
+
+/* CSS Custom Properties for theming */
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --accent-cyan: #00d4ff;
+  --accent-magenta: #ff00ff;
+  --accent-pink: #ff6b9d;
+  --accent-red: #ff4757;
+  --accent-blue: #3742fa;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+  --border-glow-cyan: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+/* Light theme variant */
+.theme-light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --text-primary: #1a1a2e;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+}
+
+/* Example component */
+.example-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--text-primary);
+}
+
+.example-card-title {
+  margin: 0 0 0.5rem 0;
+  color: var(--accent-cyan);
+}
+
+.example-card-description {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* Utility classes */
+.clip-corners-lg {
+  clip-path: polygon(
+    0 15px, 15px 0,
+    calc(100% - 15px) 0, 100% 15px,
+    100% calc(100% - 15px), calc(100% - 15px) 100%,
+    15px 100%, 0 calc(100% - 15px)
+  );
+}
+
+.clip-corners-md {
+  clip-path: polygon(
+    0 10px, 10px 0,
+    calc(100% - 10px) 0, 100% 10px,
+    100% calc(100% - 10px), calc(100% - 10px) 100%,
+    10px 100%, 0 calc(100% - 10px)
+  );
+}
+
+.clip-corners-sm {
+  clip-path: polygon(
+    0 5px, 5px 0,
+    calc(100% - 5px) 0, 100% 5px,
+    100% calc(100% - 5px), calc(100% - 5px) 100%,
+    5px 100%, 0 calc(100% - 5px)
+  );
+}

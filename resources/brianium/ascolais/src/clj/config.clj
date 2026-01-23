@@ -11,7 +11,6 @@
             [reitit.ring :as rr]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
-            [ring.middleware.resource :refer [wrap-resource]]
             [starfederation.datastar.clojure.adapter.http-kit :as ds-hk]
             [org.httpkit.server :as http-kit])
   (:import [com.zaxxer.hikari HikariDataSource HikariConfig]))
@@ -56,7 +55,6 @@
     (into routes (concat extra-routes (kaiin/routes dispatch)))
     {:data {:middleware [[wrap-params]
                          [wrap-keyword-params]
-                         [wrap-resource "public"]
                          [(twk/with-datastar ds-hk/->sse-response dispatch)]]}}))
 
 (defn handler
@@ -64,7 +62,9 @@
   [{:keys [router]}]
   (rr/ring-handler
     router
-    (rr/create-default-handler)))
+    (rr/routes
+      (rr/create-resource-handler {:path "/"})
+      (rr/create-default-handler))))
 
 (defn server
   "Start HTTP-kit server."

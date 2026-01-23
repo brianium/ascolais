@@ -418,7 +418,20 @@ Use `evt` to access DOM event:
 
 ### Hiccup in TWK
 
-Return hiccup data structures directly - TWK renders them automatically:
+Return hiccup data structures directly - TWK renders them automatically.
+
+**Important:** This is server-side hiccup (rendered to HTML), not Reagent. Use standard HTML tags only:
+
+```clojure
+;; CORRECT - standard HTML tags
+[:div [:h1 "Hello"] [:p "World"]]
+
+;; CORRECT - nested vectors for siblings
+[[:h1 "Hello"] [:p "World"]]
+
+;; WRONG - no React fragments (:<> is Reagent-specific)
+[:<> [:h1 "Hello"] [:p "World"]]
+```
 
 ```clojure
 ;; CORRECT - return hiccup directly

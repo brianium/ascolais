@@ -3,8 +3,10 @@
    Extends app config with dev-only components."
   (:require [{{top/ns}}.config :as app]
             [{{top/ns}}.routes :as routes]
+            [ascolais.sfere :as sfere]
             [ascolais.tsain :as tsain]
             [ascolais.tsain.routes :as tsain.routes]
+            [ascolais.twk :as twk]
             [integrant.core :as ig]
             [nextjournal.beholder :as beholder]))
 
@@ -37,12 +39,16 @@
          (mapv (fn [[path data]]
                  [path (update data :middleware (fnil conj []) dispatch-mw)])))))
 
+(def ^:private reload-css-script
+  "document.querySelectorAll('link[rel=stylesheet]').forEach(l => l.href = l.href.split('?')[0] + '?' + Date.now())")
+
 (defn file-watcher
   "CSS hot-reload file watcher."
   [{:keys [dispatch paths]}]
   (beholder/watch
     (fn [_event]
-      (dispatch [[::tsain/reload-css]]))
+      (dispatch [[::sfere/broadcast {:pattern [:* :*]}
+                  [::twk/execute-script reload-css-script]]]))
     (first paths)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

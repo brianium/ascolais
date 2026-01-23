@@ -19,11 +19,13 @@
 
 (defn tsain-routes
   "Tsain sandbox routes.
-   Requires dispatch and tsain-registry to compute routes."
+   Requires dispatch and tsain-registry to compute routes.
+   Filters out root redirect to avoid conflict with app routes."
   [{:keys [dispatch tsain-registry]}]
   (let [state (::tsain/state tsain-registry)
         config (::tsain/config tsain-registry)]
-    (tsain.routes/routes dispatch state config)))
+    (->> (tsain.routes/routes dispatch state config)
+         (remove #(= "/" (first %))))))
 
 (defn file-watcher
   "CSS hot-reload file watcher."

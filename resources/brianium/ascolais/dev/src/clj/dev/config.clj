@@ -17,15 +17,25 @@
   [_opts]
   (tsain/registry))
 
+(defn- wrap-dispatch
+  "Middleware that adds dispatch to the request."
+  [dispatch]
+  (fn [handler]
+    (fn [request]
+      (handler (assoc request :dispatch dispatch)))))
+
 (defn tsain-routes
   "Tsain sandbox routes.
    Requires dispatch and tsain-registry to compute routes.
-   Filters out root redirect to avoid conflict with app routes."
+   Adds dispatch middleware and filters root redirect."
   [{:keys [dispatch tsain-registry]}]
   (let [state (::tsain/state tsain-registry)
-        config (::tsain/config tsain-registry)]
+        config (::tsain/config tsain-registry)
+        dispatch-mw (wrap-dispatch dispatch)]
     (->> (tsain.routes/routes dispatch state config)
-         (remove #(= "/" (first %))))))
+         (remove #(= "/" (first %)))
+         (mapv (fn [[path data]]
+                 [path (update data :middleware (fnil conj []) dispatch-mw)])))))
 
 (defn file-watcher
   "CSS hot-reload file watcher."
@@ -59,7 +69,7 @@
                      :registries [(ig/ref :{{top/ns}}.fx.example/registry)
                                   (ig/ref ::tsain-registry)]}
 
-     ;; Tsain sandbox routes
+     ;; Tsain sandbox routes (with dispatch middleware)
      ::tsain-routes {:dispatch (ig/ref ::app/dispatch)
                      :tsain-registry (ig/ref ::tsain-registry)}
 

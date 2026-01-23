@@ -3,6 +3,11 @@
 .nrepl-port
 target/
 
+# clj-kondo
+.clj-kondo/.cache/
+.clj-kondo/imports/
+*/**/.clj-kondo/
+
 # Editors
 .idea/
 *.iml

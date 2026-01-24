@@ -1,13 +1,112 @@
 ---
-name: component-iterate
-description: Iterate on hiccup components with live preview, CSS styling, and library commits. Use alias-first workflow where structure lives in the UI namespace and examples use lean config props. Keywords: component, preview, iterate, css, hiccup, design, ui, commit, datastar, signals, interactive, alias.
+name: hiccup-component
+description: Develop hiccup components with live preview, CSS styling, and library commits. Supports spec-driven implementation workflow. Keywords: component, preview, iterate, css, hiccup, design, ui, commit, datastar, signals, interactive, alias, implement, spec.
 ---
 
-# Component Iteration Skill
+# Hiccup Component Development
 
 Drive component development through an **alias-first** REPL-powered iteration loop. Component structure lives in a UI namespace as chassis aliases, while `components.edn` stores lean alias invocations with config props.
 
-## Configuration
+## Commands
+
+This skill supports commands via arguments:
+
+- `/hiccup-component` - Show available commands
+- `/hiccup-component auto` - Autonomous component development loop
+- `/hiccup-component implement` - Spec-driven implementation workflow
+- `/hiccup-component iterate` - Direct component iteration
+
+If no argument is provided, show available commands.
+
+---
+
+## `/hiccup-component auto`
+
+Autonomous component development loop. Claude drives the entire workflow - deciding priorities, validating work visually, and continuing until satisfied.
+
+### Required Tools
+
+- **Chrome extension** - For visual validation of rendered components
+- **frontend-design MCP** - For design decisions and validation
+
+### Workflow Loop
+
+1. **Determine next task** - Claude reads specs and decides what to work on (not user-directed)
+2. **Implement component** using `/hiccup-component iterate` workflow
+3. **Visual validation** - Use chrome extension to screenshot and validate the rendered component
+4. **Test interactions** - For interactive components, test Datastar behaviors via `::tsain/patch-signals`
+5. **Iterate until satisfied** - Claude decides when quality is acceptable
+6. **Checkpoint** - Commit to tsain library, update specs, git commit
+7. **Continue** - Return to step 1 for next component
+
+### Autonomous Principles
+
+- **Claude decides priority** - Read specs, assess dependencies, choose what to build next
+- **Claude decides completion** - Keep iterating until visually and functionally satisfied
+- **Self-validation** - Use chrome screenshots to verify rendering matches intent
+- **Checkpoint frequently** - Update specs after each component so progress survives compaction
+- **No user prompting** - Only stop for genuine blockers (missing requirements, ambiguous specs)
+
+### Compaction Survival
+
+Progress persists through context compaction via specs:
+- Each completed component is marked in `specs/<feature>/implementation-plan.md`
+- Running `/specs implement` after compaction resumes from last checkpoint
+- Tsain library (`components.edn`) preserves committed components
+
+### Loop Pseudocode
+
+```
+while specs have incomplete components:
+  1. /specs implement → identify next component
+  2. Read spec requirements for that component
+  3. /hiccup-component iterate → build it
+  4. Screenshot via chrome extension → validate visually
+  5. If interactive: test with patch-signals
+  6. If not satisfied: iterate (go to 3)
+  7. Commit to tsain library
+  8. Update CLAUDE.md with component reference
+  9. Update spec: mark task complete with commit sha
+  10. git commit
+  11. Regenerate spec index
+```
+
+### Starting the Loop
+
+```bash
+# Ensure prerequisites
+clj-nrepl-eval --discover-ports  # Find REPL
+open http://localhost:3000/sandbox  # Browser ready
+
+# Then run
+/hiccup-component auto
+```
+
+Claude will take over from there, working through specs autonomously.
+
+---
+
+## `/hiccup-component implement`
+
+End-to-end workflow for implementing components from specs to production.
+
+### Steps
+
+1. **Run `/specs implement`** to identify the next spec to work on
+2. **Use `/hiccup-component iterate`** to develop the component
+3. **Use `/clojure-eval`** for REPL interaction
+4. **Update CLAUDE.md** with component reference when done
+5. **Commit** means: commit to component library with tsain AND git
+
+Do not assume a REPL connection needs to be restarted. Always run `clj-nrepl-eval --discover-ports` before your first REPL expression. The REPL is likely still running. If it is not, stop and ask the user what they want you to do.
+
+---
+
+## `/hiccup-component iterate`
+
+Direct component iteration workflow for developing a single component.
+
+### Configuration
 
 Read `tsain.edn` at project root for file locations:
 
@@ -19,15 +118,15 @@ Read `tsain.edn` at project root for file locations:
  :port 3000}
 ```
 
-## Prerequisites
+### Prerequisites
 
-1. **nREPL running** on port 7888 (use `clj-nrepl-eval --discover-ports` to verify)
+1. **Discover nREPL port first** - run `clj-nrepl-eval --discover-ports` before your first REPL expression
 2. **Sandbox started** - if not running, evaluate `(dev)` then `(start)` in the REPL
 3. **Browser open** at `http://localhost:3000/sandbox`
 
-## Discovering the API
+### Discovering the API
 
-Use sandestin discovery to explore available effects. This is the primary way to learn what's available:
+Use sandestin discovery to explore available effects:
 
 ```clojure
 (require '[ascolais.tsain :as tsain])
@@ -45,9 +144,9 @@ Use sandestin discovery to explore available effects. This is the primary way to
 (grep (dispatch) "component")
 ```
 
-## Alias-First Workflow
+### Alias-First Workflow
 
-### Step 0: Read Configuration
+#### Step 0: Read Configuration
 
 First, read `tsain.edn` to find the correct file paths:
 
@@ -57,7 +156,7 @@ cat tsain.edn
 
 The `:ui-namespace` tells you where to add aliases. The `:stylesheet` tells you where to add CSS.
 
-### Step 1: Define the Chassis Alias (Required First Step)
+#### Step 1: Define the Chassis Alias (Required First Step)
 
 Before iterating on visuals, define the component structure in the components namespace (from `:ui-namespace`). This is a production namespace, so aliases you define here can be used directly in your application views.
 
@@ -81,32 +180,32 @@ Before iterating on visuals, define the component structure in the components na
 After adding the alias, reload the namespace:
 
 ```bash
-clj-nrepl-eval -p 7888 "(reload)"
+clj-nrepl-eval -p <PORT> "(reload)"
 ```
 
-### Step 2: Preview with Alias Invocation
+#### Step 2: Preview with Alias Invocation
 
 Use the alias with config props. The namespace is from `:ui-namespace`:
 
 ```bash
-clj-nrepl-eval -p 7888 "(dispatch [[::tsain/preview
+clj-nrepl-eval -p <PORT> "(dispatch [[::tsain/preview
   [:{{top/ns}}.views.components/my-component
    {:my-component/title \"Hello World\"
     :my-component/subtitle \"A simple example\"
     :my-component/icon \"🎉\"}]]])"
 ```
 
-### Step 3: Iterate on Structure and CSS
+#### Step 3: Iterate on Structure and CSS
 
 1. **Modify the alias** in the UI namespace to adjust structure
-2. **Reload**: `clj-nrepl-eval -p 7888 "(reload)"`
+2. **Reload**: `clj-nrepl-eval -p <PORT> "(reload)"`
 3. **Re-preview** to see changes
 4. **Add CSS** to the stylesheet (from `:stylesheet`) - hot-reloads automatically
 
-### Step 4: Commit the Lean Example
+#### Step 4: Commit the Lean Example
 
 ```bash
-clj-nrepl-eval -p 7888 "(dispatch [[::tsain/commit :my-component
+clj-nrepl-eval -p <PORT> "(dispatch [[::tsain/commit :my-component
   {:description \"Card with icon and title\"
    :examples
    [{:label \"Dark\"
@@ -125,6 +224,8 @@ clj-nrepl-eval -p 7888 "(dispatch [[::tsain/commit :my-component
 
 **Result:** `components.edn` stores the lean alias form. Copying from the sandbox UI gives you clean, portable hiccup.
 
+---
+
 ## Config Props vs HTML Attrs
 
 ```clojure
@@ -140,6 +241,8 @@ clj-nrepl-eval -p 7888 "(dispatch [[::tsain/commit :my-component
 ```
 
 The alias handler receives both, but chassis automatically elides namespaced keys from the rendered HTML.
+
+---
 
 ## Effect Reference
 
@@ -158,6 +261,8 @@ All sandbox functionality is available via dispatch effects. Use `(describe (dis
 | `[::tsain/show-preview]` | Return to preview view |
 | `[::tsain/patch-signals {:key val}]` | Patch Datastar signals on all clients |
 
+---
+
 ## Discovery Functions
 
 Available in the dev namespace:
@@ -170,6 +275,8 @@ Available in the dev namespace:
 | `(grep (dispatch) "pattern")` | Search by pattern |
 | `(reload)` | Reload changed namespaces (includes alias changes) |
 
+---
+
 ## File Locations (from tsain.edn)
 
 | Config Key | Purpose |
@@ -177,6 +284,60 @@ Available in the dev namespace:
 | `:ui-namespace` | Namespace for chassis aliases |
 | `:stylesheet` | CSS file for component styles |
 | `:components-file` | Library persistence file |
+
+---
+
+## File Organization
+
+### Recognizing When to Split
+
+Before adding a new component, check if splitting would help:
+
+```bash
+wc -l src/clj/*/views/components.clj
+```
+
+If over ~1500 lines, consider splitting first.
+
+### Splitting Workflow
+
+1. **Create components directory:**
+   ```bash
+   mkdir -p src/clj/{{top/file}}/views/components
+   ```
+
+2. **Move related aliases to domain file:**
+   - Cut alias definitions from `components.clj`
+   - Create new file (e.g., `components/overlays.clj`)
+   - Add namespace declaration requiring chassis
+   - Paste aliases (keep `:{{top/ns}}.views.components/` prefix on keywords)
+
+3. **Update barrel file:**
+   ```clojure
+   (ns {{top/ns}}.views.components
+     (:require [{{top/ns}}.views.components.overlays]
+               ...))
+   ```
+
+4. **Reload and verify:**
+   ```bash
+   clj-nrepl-eval -p <PORT> "(reload)"
+   ```
+
+5. **Test in sandbox** - existing component library entries should still work
+
+### Domain Groupings (Suggested)
+
+| File | Components |
+|------|------------|
+| `buttons.clj` | button, icon-button, button-group |
+| `forms.clj` | input, textarea, select, checkbox, radio, toggle, slider, tag-input |
+| `feedback.clj` | toast, alert, progress, skeleton, empty-state |
+| `overlays.clj` | modal, drawer, popover, tooltip, dropdown-menu, command-palette |
+| `navigation.clj` | tabs, breadcrumb, pagination, stepper |
+| `data_display.clj` | table, card, badge, avatar, timeline, stat-card |
+
+---
 
 ## Best Practices
 
@@ -187,39 +348,7 @@ Available in the dev namespace:
 5. **BEM-like naming** - `.component-name`, `.component-name-element`, `.component-name--modifier`
 6. **Discovery-first** - Use `describe`, `sample`, `grep` to explore the API
 
-## Example: Creating a New Component
-
-```bash
-# 1. Read config to find file paths
-cat tsain.edn
-
-# 2. Add alias to UI namespace (using Edit tool)
-# Structure: [:div.status-badge attrs [:span.status-badge-dot] [:span.status-badge-label label]]
-
-# 3. Reload
-clj-nrepl-eval -p 7888 "(reload)"
-
-# 4. Preview with config
-clj-nrepl-eval -p 7888 "(dispatch [[::tsain/preview
-  [:{{top/ns}}.views.components/status-badge
-   {:status-badge/label \"Online\"
-    :status-badge/status :active}]]])"
-
-# 5. Add CSS to stylesheet
-# .status-badge { ... }
-# .status-badge--active { ... }
-
-# 6. Commit with dark/light variants
-clj-nrepl-eval -p 7888 "(dispatch [[::tsain/commit :status-badge
-  {:description \"Status indicator badge\"
-   :examples
-   [{:label \"Dark\"
-     :hiccup [:div {:style \"padding: 20px;\"}
-              [:{{top/ns}}.views.components/status-badge {:status-badge/label \"Online\" :status-badge/status :active}]]}
-    {:label \"Light\"
-     :hiccup [:div.theme-light {:style \"padding: 20px; background: #f0f4f8;\"}
-              [:{{top/ns}}.views.components/status-badge {:status-badge/label \"Online\" :status-badge/status :active}]]}]}]])"
-```
+---
 
 ## Dynamic Components with Datastar
 
@@ -244,8 +373,10 @@ For interactive components, Datastar attrs pass through to HTML:
 Test interactivity from REPL:
 
 ```bash
-clj-nrepl-eval -p 7888 "(dispatch [[::tsain/patch-signals {:open true}]])"
+clj-nrepl-eval -p <PORT> "(dispatch [[::tsain/patch-signals {:open true}]])"
 ```
+
+---
 
 ## CSS Extraction (Required Before Commit)
 

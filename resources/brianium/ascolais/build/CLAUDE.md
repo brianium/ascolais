@@ -769,6 +769,111 @@ Use CSS custom properties:
 
 ---
 
+## File Organization Patterns
+
+As projects grow, the monolithic component and CSS files may need splitting. The patterns below maintain full compatibility with tsain sandbox workflow.
+
+### Component Splitting (Barrel File Pattern)
+
+When `components.clj` exceeds ~1500 lines, split by domain using a barrel file:
+
+**Directory structure:**
+```
+src/clj/{{top/file}}/views/
+├── components.clj              # Barrel file - requires all sub-modules
+└── components/
+    ├── buttons.clj             # Button, IconButton, ButtonGroup
+    ├── forms.clj               # Input, Select, Checkbox, Radio, Toggle
+    ├── feedback.clj            # Toast, Alert, Progress, Skeleton
+    ├── overlays.clj            # Modal, Drawer, Popover, Tooltip, CommandPalette
+    ├── navigation.clj          # Tabs, Breadcrumb, Pagination, Stepper
+    └── data_display.clj        # Table, Card, Badge, Avatar, Timeline
+```
+
+**Barrel file (`components.clj`):**
+```clojure
+(ns {{top/ns}}.views.components
+  "Barrel file - requires component modules to register their aliases.
+   Tsain uses this namespace; defmethod is global so aliases work."
+  (:require [{{top/ns}}.views.components.buttons]
+            [{{top/ns}}.views.components.forms]
+            [{{top/ns}}.views.components.feedback]
+            [{{top/ns}}.views.components.overlays]
+            [{{top/ns}}.views.components.navigation]
+            [{{top/ns}}.views.components.data-display]))
+```
+
+**Sub-module example (`components/buttons.clj`):**
+```clojure
+(ns {{top/ns}}.views.components.buttons
+  (:require [dev.onionpancakes.chassis.core :as c]
+            [{{top/ns}}.views.icons :as icons]))
+
+(defmethod c/resolve-alias :{{top/ns}}.views.components/button
+  [_ attrs _]
+  ;; Note: alias keyword uses parent namespace, not this one
+  ...)
+
+(defmethod c/resolve-alias :{{top/ns}}.views.components/icon-button
+  [_ attrs _]
+  ...)
+```
+
+**Key points:**
+- Alias keywords use the parent namespace (`:{{top/ns}}.views.components/button`), not the sub-module namespace
+- `defmethod` is global - aliases register when the namespace loads
+- Tsain config unchanged: `:ui-namespace {{top/ns}}.views.components`
+- `(reload)` loads all required namespaces automatically
+
+### CSS Splitting
+
+Use `@import` statements in the main stylesheet:
+
+**Directory structure:**
+```
+resources/public/
+├── styles.css                  # Entry point with @imports
+└── styles/
+    ├── variables.css           # CSS custom properties
+    ├── utilities.css           # Utility classes
+    ├── buttons.css
+    ├── forms.css
+    ├── overlays.css
+    └── ...
+```
+
+**Entry point (`styles.css`):**
+```css
+/* CSS Variables and Base */
+@import 'styles/variables.css';
+@import 'styles/utilities.css';
+
+/* Components */
+@import 'styles/buttons.css';
+@import 'styles/forms.css';
+@import 'styles/feedback.css';
+@import 'styles/overlays.css';
+@import 'styles/navigation.css';
+@import 'styles/data-display.css';
+```
+
+**Key points:**
+- Tsain watches `styles.css` - changes to imported files trigger reload
+- Keep variable definitions in a shared file imported first
+- Component CSS files should be self-contained (no cross-dependencies)
+
+### When to Split
+
+Consider splitting when:
+- `components.clj` exceeds ~1500 lines
+- `styles.css` exceeds ~3000 lines
+- Multiple logically distinct component domains exist
+- Finding/editing specific components becomes slow
+
+Don't split prematurely - the monolithic structure is simpler for smaller projects.
+
+---
+
 ## Chassis Alias Conventions
 
 Component structure lives in `src/clj/{{top/file}}/views/components.clj` as chassis aliases.

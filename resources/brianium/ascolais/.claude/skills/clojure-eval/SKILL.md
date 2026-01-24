@@ -12,13 +12,15 @@ Evaluate Clojure code via nREPL using the `clj-nrepl-eval` command.
 
 ## Workflow
 
-### 1. Discover nREPL Servers
+### 1. Discover nREPL Servers (Required First Step)
+
+**Always run this before your first REPL expression in a session:**
 
 ```bash
 clj-nrepl-eval --discover-ports
 ```
 
-Shows available nREPL servers (Clojure, Babashka, shadow-cljs, etc.).
+Shows available nREPL servers (Clojure, Babashka, shadow-cljs, etc.). The REPL is likely already running - use the discovered port for all subsequent commands.
 
 ### 2. Evaluate Code
 

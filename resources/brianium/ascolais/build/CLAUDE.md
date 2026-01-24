@@ -72,7 +72,51 @@ The production router accepts an `:extra-routes` parameter, allowing dev to exte
 - **clj-reload** for namespace reloading
 - **Portal** for data inspection (tap>)
 - **PostgreSQL** with HikariCP connection pool
+- **charred** for JSON parsing/writing
 - **Cognitect test-runner** for tests
+
+---
+
+## JSON with Charred
+
+This project uses [charred](https://github.com/cnuernber/charred) for JSON parsing and writing. It's a zero-dependency, high-performance library.
+
+### Reading JSON
+
+```clojure
+(require '[charred.api :as charred])
+
+;; Parse JSON string to Clojure data
+(charred/read-json "{\"name\": \"Alice\", \"age\": 30}")
+;; => {"name" "Alice", "age" 30}
+
+;; Convert keys to keywords
+(charred/read-json "{\"name\": \"Alice\"}" :key-fn keyword)
+;; => {:name "Alice"}
+```
+
+### Writing JSON
+
+```clojure
+;; Serialize to JSON string
+(charred/write-json-str {:name "Alice" :age 30})
+;; => "{\"name\":\"Alice\",\"age\":30}"
+```
+
+### High-Performance Patterns
+
+For repeated operations, create specialized parse/write functions:
+
+```clojure
+;; Create optimized parser (thread-safe)
+(def parse-json (charred/parse-json-fn {:key-fn keyword}))
+(parse-json "{\"count\": 42}")
+;; => {:count 42}
+
+;; Create optimized writer (thread-safe)
+(def write-json (charred/write-json-fn))
+(write-json {:status "ok"})
+```
 
 ## Development Setup
 
@@ -411,6 +455,39 @@ Use `evt` to access DOM event:
 ```html
 <select data-on:change="@post('/api/update?value=' + evt.target.value)">
 ```
+
+### Event Modifiers
+
+Modifiers use **double underscore (`__`)** as delimiter. Dots (`.`) provide **arguments to modifiers**:
+
+```html
+<!-- CORRECT: double underscore separates modifiers -->
+<div data-on:click__outside="$open = false">
+<input data-on:input__debounce.300ms="@get('/search')">
+<button data-on:click__once__prevent="handle()">
+
+<!-- WRONG: dot is for modifier args, not chaining -->
+<div data-on:click.outside="...">  <!-- This is incorrect! -->
+```
+
+**In Clojure hiccup**, use keyword syntax:
+```clojure
+[:div {:data-on:click__outside "$open = false"}]
+[:input {:data-on:input__debounce.300ms "@get('/search')"}]
+[:button {:data-on:click__window__throttle.1s "handler()"}]
+```
+
+**Common modifiers:**
+| Modifier | Purpose |
+|----------|---------|
+| `__debounce.Nms` | Delay until idle (e.g., `__debounce.300ms`) |
+| `__throttle.Nms` | Rate limit (e.g., `__throttle.1s`) |
+| `__outside` | Trigger when clicking outside element |
+| `__window` | Attach listener to window |
+| `__once` | Only trigger once |
+| `__prevent` | Call `preventDefault()` |
+| `__stop` | Call `stopPropagation()` |
+| `__capture` | Use capture phase |
 
 ---
 

@@ -27,3 +27,8 @@ target/
 
 # Portal
 .portal/
+
+# Specs (generated docsify files)
+specs/.nojekyll
+specs/_sidebar.md
+specs/index.html

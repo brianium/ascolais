@@ -418,6 +418,39 @@ Datastar is a lightweight frontend framework combining backend-driven reactivity
 3. **Attributes** - `data-*` attributes declare reactive behavior
 4. **Actions** - `@get()`, `@post()` send requests that return SSE
 
+### Hypermedia-First Approach
+
+Datastar is hypermedia-focused. **The server owns data state** (lists, records, etc.) while **signals handle UI state** (open/closed, selected, hover, form inputs).
+
+**Use signals for UI interactions:**
+```clojure
+;; Toggle visibility, selections, form state - all good
+[:div {:data-signals:open "false"}
+ [:button {:data-on:click "$open = !$open"} "Toggle"]
+ [:div {:data-show "$open"} "Dropdown content"]]
+
+;; Form inputs with local validation
+[:input {:data-bind:email
+         :data-computed:valid "$email.includes('@')"}]
+```
+
+**Use server rendering for data:**
+```clojure
+;; AVOID: Client-side iteration over data
+[:div {:data-for "tag in $tags"} ...]
+
+;; PREFER: Server renders the list, patches via twk
+(defn render-tags [tags]
+  [:div#tags
+   (for [tag tags]
+     [:span.tag tag])])
+
+;; Action triggers server update, server patches new DOM
+[:button {:data-on:click "@post('/tags/add')"} "Add Tag"]
+```
+
+The DOM morph makes it practical to patch entire views for data changes, while signals keep UI responsive for interactions.
+
 ### Signals
 
 ```html

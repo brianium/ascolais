@@ -8,7 +8,7 @@ Generate a new project:
 
 ```bash
 # Using a published tag
-clojure -Sdeps '{:deps {io.github.brianium/ascolais {:git/tag "v0.2.0" :git/sha "54ca1c5"}}}' \
+clojure -Sdeps '{:deps {io.github.brianium/ascolais {:git/tag "v0.3.0" :git/sha "047e0ed"}}}' \
   -Tnew create :template brianium/ascolais :name myorg/myapp
 
 # From local checkout
@@ -62,7 +62,7 @@ myorg-myapp/
 │
 └── .claude/
     ├── settings.json           # Paren repair hooks
-    └── skills/                 # clojure-eval, component-iterate
+    └── skills/                 # clojure-eval, hiccup-component
 ```
 
 ## Technology Stack
@@ -206,10 +206,10 @@ CSS hot-reloads automatically when editing `resources/public/styles.css`.
 
 Generated projects are optimized for Claude-assisted development:
 
-- **CLAUDE.md** - Comprehensive documentation (~800 lines) covering the entire effect ecosystem, patterns, and conventions
+- **CLAUDE.md** - Comprehensive documentation covering the entire effect ecosystem, patterns, and conventions
 - **Paren repair hooks** - Automatic Clojure formatting on file edits
 - **clojure-eval skill** - REPL evaluation via nREPL
-- **component-iterate skill** - Workflow for developing UI components
+- **hiccup-component skill** - Workflow for developing UI components (iterate, implement, auto modes)
 
 ## Background
 

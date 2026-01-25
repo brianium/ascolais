@@ -62,7 +62,7 @@ myorg-myapp/
 │
 └── .claude/
     ├── settings.json           # Paren repair hooks
-    └── skills/                 # clojure-eval, hiccup-component
+    └── skills/                 # clojure-eval, tsain
 ```
 
 ## Technology Stack
@@ -209,7 +209,7 @@ Generated projects are optimized for Claude-assisted development:
 - **CLAUDE.md** - Comprehensive documentation covering the entire effect ecosystem, patterns, and conventions
 - **Paren repair hooks** - Automatic Clojure formatting on file edits
 - **clojure-eval skill** - REPL evaluation via nREPL
-- **hiccup-component skill** - Workflow for developing UI components (iterate, implement, auto modes)
+- **tsain skill** - REPL-driven component development with live preview, CSS styling, and library commits
 
 ## Background
 

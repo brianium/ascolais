@@ -12,6 +12,7 @@ target/
 .idea/
 *.iml
 .vscode/
+.lsp/
 *.swp
 *~
 

@@ -73,8 +73,7 @@ resources/
   public/
     styles.css         # Component CSS (hot-reloadable)
 
-dev/resources/
-  components.edn       # Tsain component library (dev-only)
+components.db            # Tsain component library (SQLite, dev-only)
 ```
 
 ## Claude Code Integration

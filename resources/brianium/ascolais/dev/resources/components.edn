@@ -1,6 +1,0 @@
-{:components
- {:example-card
-  {:description "Example card component"
-   :hiccup [:{{top/ns}}.views.components/example-card
-            {:example-card/title "Example Title"
-             :example-card/description "An example card component."}]}}}

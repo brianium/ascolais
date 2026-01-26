@@ -14,6 +14,7 @@ This is a Clojure web application powered by the sandestin effect dispatch ecosy
 | **kaiin** | Declarative HTTP routing from registry metadata | `kaiin/routes` |
 | **manse** | Database effects with next.jdbc | `manse/registry`, execute effects |
 | **tsain** | Component development sandbox | `tsain/registry`, preview effects |
+| **html.yeah** | Schema-validated chassis alias elements | `hy/defelem`, discovery API |
 
 ## Architecture
 
@@ -116,6 +117,177 @@ For repeated operations, create specialized parse/write functions:
 ;; Create optimized writer (thread-safe)
 (def write-json (charred/write-json-fn))
 (write-json {:status "ok"})
+```
+
+---
+
+## html.yeah Components
+
+This project uses [html.yeah](https://github.com/brianium/html.yeah) for defining schema-validated [Chassis](https://github.com/onionpancakes/chassis) alias elements. The `defelem` macro attaches malli schemas to components, enabling discoverability, documentation, and optional runtime validation.
+
+### Defining Components with defelem
+
+```clojure
+(require '[html.yeah :as hy])
+
+(hy/defelem my-card
+  [:map {:doc "A card with title and optional description"
+         :my-card/keys [title description]}
+   [:my-card/title :string]
+   [:my-card/description {:optional true} :string]]
+  [:div.my-card attrs
+   [:h3.my-card-title my-card/title]
+   (when my-card/description
+     [:p.my-card-description my-card/description])])
+```
+
+**Key concepts:**
+
+- **Schema properties** - `:doc` for documentation, `:<component>/keys` for destructuring
+- **Namespaced keys** - Use `:<component>/keys [prop1 prop2]` style for destructuring
+- **`attrs`** - Implicit binding for the full attribute map (pass to root element for HTML attrs)
+- **`(hy/children)`** - Placeholder for child elements passed to the component
+
+### Schema Properties
+
+| Property | Purpose |
+|----------|---------|
+| `:doc` | Documentation string (appears in discovery and inline docs) |
+| `:<ns>/keys` | Destructure namespaced keys (e.g., `:my-card/keys [title]`) |
+| `:as` | Bind full attrs map to a symbol |
+| `:or` | Default values for optional keys |
+| `::hy/children` | Schema for child elements |
+
+### Destructuring Styles
+
+```clojure
+;; Preferred: namespaced keys destructuring
+[:map {:my-card/keys [title description]}
+ [:my-card/title :string]
+ [:my-card/description :string]]
+
+;; With defaults
+[:map {:my-card/keys [title variant]
+       :or {variant :default}}
+ [:my-card/title :string]
+ [:my-card/variant {:optional true} [:enum :default :outlined :filled]]]
+
+;; Binding full attrs
+[:map {:my-card/keys [title]
+       :as attrs}
+ [:my-card/title :string]]
+```
+
+### Children Support
+
+Use `(hy/children)` as a placeholder for child content:
+
+```clojure
+(hy/defelem container
+  [:map {:doc "A container with optional padding"
+         ::hy/children [:* :any]  ;; Schema for children
+         :container/keys [padded]}
+   [:container/padded {:optional true} :boolean]]
+  [:div {:class (when container/padded "p-4")}
+   (hy/children)])
+
+;; Usage
+[:my.ns/container {:container/padded true}
+ [:p "Child content"]
+ [:p "More children"]]
+```
+
+### Discovery API
+
+Explore components at runtime using keyword tags:
+
+```clojure
+(require '[html.yeah :as hy])
+
+;; Lookup component by keyword
+(hy/element :myapp.ui/my-card)
+;; => {:tag :myapp.ui/my-card
+;;     :attributes [:map ...]
+;;     :children [:* :any]
+;;     :doc "A card with title..."
+;;     :var #'myapp.ui/my-card
+;;     :ns 'myapp.ui}
+
+;; List all element tags
+(hy/element-tags)
+;; => (:myapp.ui/my-card :myapp.ui/button ...)
+
+;; List elements with optional namespace filter
+(hy/elements)                      ;; All elements
+(hy/elements {:ns 'myapp.ui})      ;; Filter by namespace
+(hy/elements {:ns #"myapp\..*"})   ;; Filter by regex
+
+;; Search by documentation
+(hy/search-elements "button")      ;; Case-insensitive
+(hy/search-elements #"[Bb]utton")  ;; Regex
+```
+
+### Binding Forms
+
+Top-level `let`, `when-let`, `when-some`, `if-let`, and `if-some` are hoisted outside compilation:
+
+```clojure
+(hy/defelem status-badge
+  [:map {:status-badge/keys [status]}
+   [:status-badge/status [:enum :success :warning :error]]]
+  (let [class (case status-badge/status
+                :success "badge-success"
+                :warning "badge-warning"
+                :error "badge-error")]
+    [:span {:class ["badge" class]}
+     (hy/children)]))
+```
+
+### Attribute Transformation
+
+For complex attribute transformations (e.g., converting maps to JSON), use `html.yeah.attrs/option`:
+
+```clojure
+(require '[html.yeah.attrs :as attrs]
+         '[charred.api :as json])
+
+(defn jsonify-signals
+  [tag attrs]
+  (if (map? (:data-signals attrs))
+    (update attrs :data-signals json/write-json-str)
+    attrs))
+
+(hy/defelem signal-div
+  [:map {::attrs/transform jsonify-signals
+         :as attrs}]
+  [:div attrs (hy/children)])
+```
+
+### Runtime Validation
+
+Enable runtime schema validation with malli.dev:
+
+```clojure
+(require '[malli.dev :as malli-dev])
+
+(malli-dev/start!)  ;; Instruments all defelem components
+```
+
+Invalid attributes will produce detailed error messages during development.
+
+### Generating Sample Elements
+
+Generate valid sample data from component schemas:
+
+```clojure
+(require '[malli.generator :as mg])
+
+(defn generate-element [tag & children]
+  (when-let [{:keys [attributes]} (hy/element tag)]
+    [tag (mg/generate attributes) children]))
+
+(generate-element :myapp.ui/my-card)
+;; => [:myapp.ui/my-card {:my-card/title "..."} nil]
 ```
 
 ## Development Setup
@@ -238,8 +410,7 @@ resources/
   public/
     styles.css           # Component CSS (hot-reloadable)
 
-dev/resources/
-  components.edn         # Tsain component library (dev-only)
+components.db            # Tsain component library (SQLite, dev-only)
 
 test/src/clj/            # Test files
 ```
@@ -876,20 +1047,23 @@ Don't split prematurely - the monolithic structure is simpler for smaller projec
 
 ## Chassis Alias Conventions
 
-Component structure lives in `src/clj/{{top/file}}/views/components.clj` as chassis aliases.
+Component structure lives in `src/clj/{{top/file}}/views/components.clj` as chassis aliases using `html.yeah/defelem`.
 
 ### Alias-First Development
 
 ```clojure
-;; 1. Define structure in views/components.clj
-(defmethod c/resolve-alias ::my-card
-  [_ attrs _]
-  (let [{:my-card/keys [title subtitle]} attrs]
-    [:div.my-card attrs
-     [:h3.my-card-title title]
-     [:p.my-card-subtitle subtitle]]))
+;; 1. Define component with schema in views/components.clj
+(hy/defelem my-card
+  [:map {:doc "A card with title and subtitle"
+         :my-card/keys [title subtitle]}
+   [:my-card/title :string]
+   [:my-card/subtitle {:optional true} :string]]
+  [:div.my-card attrs
+   [:h3.my-card-title my-card/title]
+   (when my-card/subtitle
+     [:p.my-card-subtitle my-card/subtitle])])
 
-;; 2. Use in dev/resources/components.edn with lean config
+;; 2. Use in views or commit to tsain library
 [:{{top/ns}}.views.components/my-card
  {:my-card/title "Hello World"
   :my-card/subtitle "A description"}]

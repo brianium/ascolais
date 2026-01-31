@@ -1,12 +1,6 @@
-# 001: Remove Redundant init-key Defmethods
+# Remove Redundant init-key Defmethods - Research
 
-**Status:** Complete
-
-## Summary
-
-Remove redundant `defmethod ig/init-key` implementations that merely delegate to same-named initializer functions. Integrant's [initializer functions](https://github.com/weavejester/integrant?tab=readme-ov-file#initializer-functions) feature automatically discovers and uses functions matching the keyword name, making the explicit defmethods unnecessary.
-
-## Background
+## Problem Statement
 
 The current template defines initializer functions and then wraps them in defmethods:
 
@@ -20,9 +14,22 @@ The current template defines initializer functions and then wraps them in defmet
   (datasource opts))
 ```
 
-Integrant will automatically find `datasource` for the `::datasource` key if the namespace is loaded.
+Integrant will automatically find `datasource` for the `::datasource` key if the namespace is loaded, making these defmethods unnecessary boilerplate.
 
-## Affected Files
+## Requirements
+
+### Functional Requirements
+
+1. Remove init-key defmethods that simply delegate to same-named functions
+2. Keep halt-key! defmethods (required for resource cleanup)
+3. Ensure system still initializes and halts correctly
+
+### Non-Functional Requirements
+
+- No behavior change from user perspective
+- Cleaner, more idiomatic Integrant usage
+
+## Affected Files Analysis
 
 ### `resources/brianium/ascolais/src/clj/config.clj`
 
@@ -57,15 +64,10 @@ Remove this init-key defmethod (line 41):
 
 1. **Function naming**: The `dev-router` function must be renamed to `router` to match the `::router` key
 
-2. **Namespace loading**: Integrant must load the namespaces containing initializer functions. Verify that `ig/load-namespaces` is called on the config before `ig/init`. Check the user.clj/dev.clj setup.
+2. **Namespace loading**: Integrant must load the namespaces containing initializer functions. Verify that `ig/load-namespaces` is called on the config before `ig/init`
 
-3. **Section cleanup**: After removing the init-key defmethods, the "Integrant Methods" sections can be renamed to "Integrant Halt Methods" or similar, containing only halt-key! implementations. Files with no halt-key! methods (like fx/example.clj) can remove the section entirely.
+3. **Section cleanup**: After removing the init-key defmethods, the "Integrant Methods" sections can be renamed to "Integrant Halt Methods" or similar
 
-## Verification
+## References
 
-After changes:
-1. Start a generated project's REPL
-2. Run `(start)` - system should initialize all components
-3. Run `(restart)` - system should halt and reinitialize cleanly
-4. Verify datasource closes properly (no connection pool warnings)
-5. Verify server stops properly (port released)
+- [Integrant Initializer Functions](https://github.com/weavejester/integrant?tab=readme-ov-file#initializer-functions)

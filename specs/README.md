@@ -1,20 +1,12 @@
 # Specifications
 
-This directory contains living specifications for ascolais features and concepts.
+*Auto-generated on 2026-01-31 12:28*
 
-## Current Priorities
+## Completed
 
-No pending specs - all specifications are complete.
-
-## Spec Index
-
-| Spec | Status | Description |
-|------|--------|-------------|
-| [001-remove-redundant-init-key](./001-remove-redundant-init-key.md) | Complete | Remove redundant init-key defmethods in favor of Integrant initializer functions |
-| [002-layout-persistent-connection](./002-layout-persistent-connection.md) | Complete | Update layout to use twk/CDN-url and demonstrate persistent SSE connection pattern |
-| [003-document-kaiin-vs-manual-routes](./003-document-kaiin-vs-manual-routes.md) | Complete | Document when to use kaiin routes vs manual handlers for persistent SSE |
-| [004-move-public-to-resources](./004-move-public-to-resources.md) | Complete | Move dev/resources/public to resources/public for standard asset location |
-| [005-move-chassis-aliases-to-production](./005-move-chassis-aliases-to-production.md) | Complete | Move chassis aliases from sandbox.ui to production namespace |
-| [006-unify-router-configuration](./006-unify-router-configuration.md) | Complete | Unify router config so dev extends production via :extra-routes parameter |
-
-Status values: Draft, Active, Complete, Archived
+- [Remove Redundant init-key Defmethods](001-remove-redundant-init-key/README.md)
+- [Layout with Persistent Connection Pattern](002-layout-persistent-connection/README.md)
+- [Document Kaiin vs Manual Routes](003-document-kaiin-vs-manual-routes/README.md)
+- [Move Public to Resources](004-move-public-to-resources/README.md)
+- [Move Chassis Aliases to Production](005-move-chassis-aliases-to-production/README.md)
+- [Unify Router Configuration](006-unify-router-configuration/README.md)

@@ -1,12 +1,6 @@
-# 003: Document Kaiin vs Manual Routes
+# Document Kaiin vs Manual Routes - Research
 
-**Status:** Complete
-
-## Summary
-
-Update the templated CLAUDE.md to clarify when to use kaiin-generated routes vs manual route handlers, specifically around persistent SSE connections.
-
-## Background
+## Problem Statement
 
 Kaiin generates routes from registry metadata and handles request/response dispatch. However, it explicitly closes connections after dispatch - it only relays dispatches to sfere targets. This is by design: kaiin is for stateless request/response patterns.
 
@@ -14,13 +8,44 @@ For persistent SSE connections (where the connection stays open and receives bro
 
 This distinction is a key architectural decision point that developers need to understand.
 
-## Changes Required
+## Requirements
 
-### Update CLAUDE.md Kaiin Section
+### Functional Requirements
 
-**File:** `resources/brianium/ascolais/build/CLAUDE.md`
+1. Clear explanation of when to use kaiin routes
+2. Clear explanation of when to use manual handlers
+3. Code examples for both patterns
 
-Add a new section after the existing Kaiin documentation:
+### Non-Functional Requirements
+
+- Concise but complete documentation
+- Syntactically correct examples
+
+## Kaiin Routes - Use Cases
+
+- Form submissions
+- API endpoints that return data
+- Actions that dispatch effects and close
+
+Kaiin routes workflow:
+1. Parse signals and path params from request
+2. Dispatch effects via sandestin
+3. Relay effects to sfere targets (if `::kaiin/target` specified)
+4. Close the connection
+
+## Manual Handlers - Use Cases
+
+- Real-time updates
+- Live dashboards
+- Chat/collaboration features
+- Any page that receives server-pushed updates
+
+Manual SSE handlers workflow:
+1. Return `::sfere/key` to store the connection
+2. Return `::twk/fx` for initial effects to send
+3. Connection stays open for broadcasts
+
+## Documentation Content
 
 ```markdown
 ### Kaiin vs Manual Routes
@@ -30,28 +55,15 @@ Add a new section after the existing Kaiin documentation:
 - API endpoints that return data
 - Actions that dispatch effects and close
 
-Kaiin routes:
-1. Parse signals and path params from request
-2. Dispatch effects via sandestin
-3. Relay effects to sfere targets (if `::kaiin/target` specified)
-4. Close the connection
-
 **Use Manual Handlers** for persistent SSE connections:
 - Real-time updates
 - Live dashboards
 - Chat/collaboration features
-- Any page that receives server-pushed updates
-
-Manual SSE handlers:
-1. Return `::sfere/key` to store the connection
-2. Return `::twk/fx` for initial effects to send
-3. Connection stays open for broadcasts
 
 Example manual SSE handler:
 
 ```clojure
 (defn sse-connect
-  "Establish persistent SSE connection."
   [{:keys [signals]}]
   (let [session-id (:sessionId signals)]
     {::sfere/key [:page "home" session-id]
@@ -63,19 +75,9 @@ Route definition (NOT using kaiin metadata):
 ```clojure
 ["/sse/home" {:get {:handler sse-connect}}]
 ```
-
-Kaiin's `::kaiin/target` broadcasts to stored connections but does NOT keep the originating connection open.
 ```
 
-## Implementation Notes
+## References
 
-1. Place this section in CLAUDE.md after the existing Kaiin routing section
-2. Keep the explanation concise but clear on the key distinction
-3. Include a practical example showing the handler pattern
-
-## Verification
-
-After changes:
-1. Generate a new project from the template
-2. Review CLAUDE.md for clarity
-3. Verify the example code is syntactically correct
+- Spec 002 (Layout Persistent Connection) - implementation details
+- Kaiin library source

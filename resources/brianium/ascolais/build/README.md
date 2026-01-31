@@ -47,7 +47,6 @@ clj -X:test
 | **sandestin** | Effect dispatch with schema-driven discoverability |
 | **twk** | Datastar SSE integration |
 | **sfere** | Connection management and broadcasting |
-| **kaiin** | Declarative HTTP routing from registry metadata |
 | **manse** | Database effects with next.jdbc |
 | **tsain** | REPL-driven component development sandbox |
 

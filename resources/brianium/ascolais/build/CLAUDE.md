@@ -11,7 +11,6 @@ This is a Clojure web application powered by the sandestin effect dispatch ecosy
 | **sandestin** | Effect dispatch with schema-driven discoverability | `s/create-dispatch`, discovery API |
 | **twk** | Datastar SSE integration | `twk/registry`, `twk/with-datastar` middleware |
 | **sfere** | Connection management and broadcasting | `sfere/registry`, `sfere/store` |
-| **kaiin** | Declarative HTTP routing from registry metadata | `kaiin/routes` |
 | **manse** | Database effects with next.jdbc | `manse/registry`, execute effects |
 | **tsain** | Component development sandbox | `tsain/registry`, preview effects |
 | **html.yeah** | Schema-validated chassis alias elements | `hy/defelem`, discovery API |
@@ -78,6 +77,31 @@ The production router accepts an `:extra-routes` parameter, allowing dev to exte
 
 ---
 
+## Integrant Patterns
+
+### Initializer Functions (Preferred)
+
+For simple component initialization, define a function that takes a config map. Integrant infers the initializer from the namespaced key:
+
+```clojure
+;; In {{top/ns}}/example.clj
+(defn client
+  "Create an API client. Integrant calls this via ::client key."
+  [{:keys [api-key]}]
+  (if api-key
+    (-> (SomeClient/builder) (.apiKey api-key) (.build))
+    (SomeClient/fromEnv)))
+
+;; In config.clj - no defmethod needed
+{::example/client {:api-key (get secrets "EXAMPLE_API_KEY")}}
+```
+
+### When defmethod Is Still Required
+
+Use explicit `defmethod` for: `ig/halt-key!`, `ig/suspend-key!`, `ig/resume-key`, complex initialization, or refs.
+
+---
+
 ## JSON with Charred
 
 This project uses [charred](https://github.com/cnuernber/charred) for JSON parsing and writing. It's a zero-dependency, high-performance library.
@@ -123,183 +147,90 @@ For repeated operations, create specialized parse/write functions:
 
 ## html.yeah Components
 
-This project uses [html.yeah](https://github.com/brianium/html.yeah) for defining schema-validated [Chassis](https://github.com/onionpancakes/chassis) alias elements. The `defelem` macro attaches malli schemas to components, enabling discoverability, documentation, and optional runtime validation.
-
-### Defining Components with defelem
+Define schema-validated [Chassis](https://github.com/onionpancakes/chassis) alias elements with `defelem`:
 
 ```clojure
-(require '[html.yeah :as hy])
+(require '[html.yeah :as hy :refer [defelem]])
 
-(hy/defelem my-card
+(defelem my-card
   [:map {:doc "A card with title and optional description"
-         :my-card/keys [title description]}
+         :my-card/keys [title description]
+         :as attrs}
    [:my-card/title :string]
    [:my-card/description {:optional true} :string]]
   [:div.my-card attrs
-   [:h3.my-card-title my-card/title]
-   (when my-card/description
-     [:p.my-card-description my-card/description])])
+   [:h3.my-card-title title]
+   (when description
+     [:p.my-card-description description])])
 ```
 
 **Key concepts:**
-
 - **Schema properties** - `:doc` for documentation, `:<component>/keys` for destructuring
-- **Namespaced keys** - Use `:<component>/keys [prop1 prop2]` style for destructuring
-- **`attrs`** - Implicit binding for the full attribute map (pass to root element for HTML attrs)
+- **`:as attrs`** - Bind full attribute map to pass through HTML attrs to root element
 - **`(hy/children)`** - Placeholder for child elements passed to the component
 
-### Schema Properties
+### CRITICAL: Single Attribute Map Rule
 
-| Property | Purpose |
-|----------|---------|
-| `:doc` | Documentation string (appears in discovery and inline docs) |
-| `:<ns>/keys` | Destructure namespaced keys (e.g., `:my-card/keys [title]`) |
-| `:as` | Bind full attrs map to a symbol |
-| `:or` | Default values for optional keys |
-| `::hy/children` | Schema for child elements |
-
-### Destructuring Styles
+Hiccup elements accept only ONE attribute map. If you pass multiple maps, the extras render as text:
 
 ```clojure
-;; Preferred: namespaced keys destructuring
-[:map {:my-card/keys [title description]}
- [:my-card/title :string]
- [:my-card/description :string]]
+;; WRONG - two attribute maps, second renders as text "{:class ...}"
+[:div.my-card {:class "extra"} attrs (hy/children)]
 
-;; With defaults
-[:map {:my-card/keys [title variant]
-       :or {variant :default}}
- [:my-card/title :string]
- [:my-card/variant {:optional true} [:enum :default :outlined :filled]]]
-
-;; Binding full attrs
-[:map {:my-card/keys [title]
-       :as attrs}
- [:my-card/title :string]]
+;; CORRECT - merge computed classes into the single attrs map
+[:div.my-card (update attrs :class #(into ["extra"] (if (coll? %) % (when % [%]))))
+ (hy/children)]
 ```
+
+**Symptom of violation:** Raw maps like `{:button/variant :secondary}` appearing as text in rendered output.
 
 ### Children Support
 
-Use `(hy/children)` as a placeholder for child content:
-
 ```clojure
-(hy/defelem container
+(defelem container
   [:map {:doc "A container with optional padding"
-         ::hy/children [:* :any]  ;; Schema for children
-         :container/keys [padded]}
+         ::hy/children [:* :any]
+         :container/keys [padded]
+         :as attrs}
    [:container/padded {:optional true} :boolean]]
-  [:div {:class (when container/padded "p-4")}
+  [:div (assoc attrs :class ["container" (when padded "p-4")])
    (hy/children)])
-
-;; Usage
-[:my.ns/container {:container/padded true}
- [:p "Child content"]
- [:p "More children"]]
 ```
 
 ### Discovery API
 
-Explore components at runtime using keyword tags:
-
 ```clojure
-(require '[html.yeah :as hy])
-
-;; Lookup component by keyword
-(hy/element :myapp.ui/my-card)
-;; => {:tag :myapp.ui/my-card
-;;     :attributes [:map ...]
-;;     :children [:* :any]
-;;     :doc "A card with title..."
-;;     :var #'myapp.ui/my-card
-;;     :ns 'myapp.ui}
-
-;; List all element tags
-(hy/element-tags)
-;; => (:myapp.ui/my-card :myapp.ui/button ...)
-
-;; List elements with optional namespace filter
-(hy/elements)                      ;; All elements
-(hy/elements {:ns 'myapp.ui})      ;; Filter by namespace
-(hy/elements {:ns #"myapp\..*"})   ;; Filter by regex
-
-;; Search by documentation
-(hy/search-elements "button")      ;; Case-insensitive
-(hy/search-elements #"[Bb]utton")  ;; Regex
-```
-
-### Binding Forms
-
-Top-level `let`, `when-let`, `when-some`, `if-let`, and `if-some` are hoisted outside compilation:
-
-```clojure
-(hy/defelem status-badge
-  [:map {:status-badge/keys [status]}
-   [:status-badge/status [:enum :success :warning :error]]]
-  (let [class (case status-badge/status
-                :success "badge-success"
-                :warning "badge-warning"
-                :error "badge-error")]
-    [:span {:class ["badge" class]}
-     (hy/children)]))
+(hy/element :myapp.ui/my-card)      ;; Lookup component by keyword
+(hy/elements)                        ;; List all elements
+(hy/elements {:ns 'myapp.ui})        ;; Filter by namespace
+(hy/search-elements "button")        ;; Search by documentation
 ```
 
 ### Attribute Transformation
 
-For complex attribute transformations (e.g., converting maps to JSON), use `html.yeah.attrs/option`:
+For complex transformations (e.g., converting maps to JSON):
 
 ```clojure
-(require '[html.yeah.attrs :as attrs]
-         '[charred.api :as json])
+(require '[html.yeah.attrs :as attrs])
 
-(defn jsonify-signals
-  [tag attrs]
+(defn jsonify-signals [tag attrs]
   (if (map? (:data-signals attrs))
-    (update attrs :data-signals json/write-json-str)
+    (update attrs :data-signals charred/write-json-str)
     attrs))
 
-(hy/defelem signal-div
-  [:map {::attrs/transform jsonify-signals
-         :as attrs}]
+(defelem signal-div
+  [:map {::attrs/transform jsonify-signals :as attrs}]
   [:div attrs (hy/children)])
 ```
 
-### Runtime Validation
-
-Enable runtime schema validation with malli.dev:
-
-```clojure
-(require '[malli.dev :as malli-dev])
-
-(malli-dev/start!)  ;; Instruments all defelem components
-```
-
-Invalid attributes will produce detailed error messages during development.
-
-### Generating Sample Elements
-
-Generate valid sample data from component schemas:
-
-```clojure
-(require '[malli.generator :as mg])
-
-(defn generate-element [tag & children]
-  (when-let [{:keys [attributes]} (hy/element tag)]
-    [tag (mg/generate attributes) children]))
-
-(generate-element :myapp.ui/my-card)
-;; => [:myapp.ui/my-card {:my-card/title "..."} nil]
-```
+---
 
 ## Development Setup
 
 ### Prerequisites
 
 ```bash
-# Start PostgreSQL
-docker compose up -d
-
-# Verify database is running
-docker compose ps
+docker compose up -d    # Start PostgreSQL
 ```
 
 ### Starting the REPL
@@ -317,10 +248,7 @@ clj -M:dev
 5. Reload: `(reload)`
 
 The `dev` namespace provides:
-- `(start)` - Start the system at localhost:3000
-- `(stop)` - Stop the system
-- `(reload)` - Reload changed namespaces via clj-reload
-- `(restart)` - Stop, reload, and start
+- `(start)` / `(stop)` / `(reload)` / `(restart)` - System lifecycle
 - `(dispatch effects)` - Dispatch sandestin effects
 - `(dispatch)` - Get the raw dispatch function (for discovery)
 - `(describe (dispatch))` - List all registered effects/actions
@@ -329,31 +257,40 @@ The `dev` namespace provides:
 
 ### Portal
 
-Portal opens automatically when the dev namespace loads. Any `(tap> data)` calls will appear in the Portal UI.
+Portal opens automatically. **Note for Claude Code:** Portal output is not accessible programmatically. Use `prn` for debugging during automated sessions instead of `tap>`.
 
 ### Component Preview (Tsain Sandbox)
 
-The sandbox provides a browser-based preview area for rapidly iterating on hiccup components. Open `localhost:3000/sandbox` in a browser, then use the tsain registry effects via dispatch:
+Open `localhost:3000/sandbox` then use tsain effects:
 
 ```clojure
 (require '[ascolais.tsain :as tsain])
 
-;; Replace preview with new content
 (dispatch [[::tsain/preview [:h1 "Hello World"]]])
-
-;; Build up content by appending
 (dispatch [[::tsain/preview-clear]])
-(dispatch [[::tsain/preview-append [:div.card [:h3 "Card 1"] [:p "First card"]]]])
+(dispatch [[::tsain/preview-append [:div.card "Content"]]])
 
-;; Commit a component to the library
-(dispatch [[::tsain/commit :my-card {:description "Card component"}]])
-
-;; Show a specific component
-(dispatch [[::tsain/show-components :my-card]])
-
-;; Patch Datastar signals for testing interactivity
-(dispatch [[::tsain/patch-signals {:count 42}]])
+;; Commit component to library (MUST include :examples with hiccup!)
+(dispatch [[::tsain/commit :{{top/ns}}.views.components/my-card
+  {:description "Card component"
+   :category "Layout"
+   :examples [{:label "Default"
+               :hiccup [:{{top/ns}}.views.components/my-card
+                        {:my-card/title "Example"}]}]}]])
 ```
+
+**Categories:** `Actions`, `Forms`, `Layout`, `Feedback`
+
+**CRITICAL: Every new or modified `defelem` component MUST be committed to the tsain library (`::tsain/commit`) before the work is considered complete. A component that exists in code but not in the sandbox library is unfinished. After committing to the tsain library, restart the web server with `(dev/restart)` to persist the component database.**
+
+### Design System Reference
+
+- **Display font:** IBM Plex Serif (headings)
+- **Body font:** System sans-serif
+- **Accent:** `--accent-primary` (teal-600 #0d9488)
+- **Backgrounds:** `--bg-primary`, `--bg-secondary`, `--bg-tertiary`
+- **Spacing:** 4px base unit (--space-1 through --space-16)
+- **Border Radius:** --radius-sm (4px) through --radius-xl (12px)
 
 ---
 
@@ -361,31 +298,24 @@ The sandbox provides a browser-based preview area for rapidly iterating on hiccu
 
 Migrations use ragtime with SQL files in `resources/migrations/`.
 
-### Creating a Migration
+**Naming:** `001-description.up.sql` and `001-description.down.sql`
 
-1. Create numbered SQL files:
-   - `resources/migrations/001-create-users.up.sql`
-   - `resources/migrations/001-create-users.down.sql`
+**Pattern:** Always use `IF NOT EXISTS` / `IF EXISTS` for idempotent migrations:
+```sql
+-- up
+CREATE TABLE IF NOT EXISTS foo (...);
+CREATE INDEX IF NOT EXISTS idx_foo ON foo(...);
 
-2. Run from REPL:
-   ```clojure
-   (migrate!)    ;; Apply pending migrations
-   (rollback!)   ;; Undo last migration
-   ```
-
-### Resetting Database
-
-```clojure
-;; Roll back all, then migrate
-(dotimes [_ 10] (rollback!))
-(migrate!)
+-- down
+DROP TABLE IF EXISTS foo;
 ```
 
-### Docker Commands
+```clojure
+(migrate!)    ;; Apply pending migrations
+(rollback!)   ;; Undo last migration
+```
 
 ```bash
-docker compose up -d      # Start PostgreSQL
-docker compose down       # Stop PostgreSQL
 docker compose down -v    # Reset database (delete volume)
 ```
 
@@ -395,24 +325,22 @@ docker compose down -v    # Reset database (delete volume)
 
 ```
 src/clj/{{top/file}}/
-  {{main/file}}.clj      # Application entry point
-  config.clj             # Integrant system configuration
-  routes.clj             # Ring route handlers
-  fx/                    # Effect registries
+  {{main/file}}.clj        # Application entry point
+  config.clj               # Integrant system configuration
+  secrets.clj              # .env file loader for secrets
+  auth.clj                 # Google OAuth authentication
+  routes.clj               # Ring route handlers
+  fx/                      # Effect registries
 
 dev/src/clj/
-  user.clj               # REPL initialization
-  dev.clj                # Dev namespace
-  dev/config.clj         # Dev integrant config
+  user.clj                 # REPL initialization
+  dev.clj                  # Dev namespace
 
 resources/
-  migrations/            # SQL migration files
-  public/
-    styles.css           # Component CSS (hot-reloadable)
+  migrations/              # SQL migration files
+  public/styles.css        # Component CSS (hot-reloadable)
 
-components.db            # Tsain component library (SQLite, dev-only)
-
-test/src/clj/            # Test files
+components.db              # Tsain component library (SQLite) - COMMIT THIS FILE
 ```
 
 ---
@@ -421,33 +349,87 @@ test/src/clj/            # Test files
 
 Use the clojure-eval skill to evaluate code via nREPL.
 
-### Starting an nREPL Server
+**Always discover the port first** - never hardcode or guess ports:
 
 ```bash
-clj -Sdeps '{:deps {nrepl/nrepl {:mvn/version "1.3.0"}}}' -M:dev -m nrepl.cmdline --port 7888
+clj-nrepl-eval --discover-ports    # Find running nREPL servers
+clj-nrepl-eval -p <PORT> "(dev)"   # Use discovered port
+clj-nrepl-eval -p <PORT> "(dev/reload)"
 ```
 
-### Connecting and Evaluating
+Do NOT use `lsof`, `netstat`, or other manual methods to find nREPL ports.
 
-```bash
-clj-nrepl-eval --discover-ports          # Find running REPLs
-clj-nrepl-eval -p 7888 "(+ 1 2 3)"       # Evaluate expression
+### Accessing the Running System
+
+The running Integrant system is available at `dev/*system*`:
+
+```clojure
+(keys dev/*system*)                                    ;; List all components
+(:{{top/ns}}.config/store dev/*system*)                ;; Get sfere connection store
+(:{{top/ns}}.config/datasource dev/*system*)           ;; Get database connection
 ```
 
-**Important:** All REPL evaluation should take place in the `dev` namespace:
+### Testing UI Updates from REPL
 
-```bash
-clj-nrepl-eval -p 7888 "(dev)"
-clj-nrepl-eval -p 7888 "(reload)"
+**Don't dispatch twk effects directly** - they require an SSE context and will fail:
+
+```clojure
+;; WRONG - fails with "not a SSEGenerator"
+(dev/dispatch [[::twk/patch-signals {:foo "bar"}]])
 ```
+
+**Use sfere broadcast** to push updates to connected browsers:
+
+```clojure
+(require '[ascolais.sfere :as sfere])
+
+;; List active connections
+(sfere/list-connections (:{{top/ns}}.config/store dev/*system*))
+;; => ([:ascolais.sfere/default-scope [:page "home" "session-id"]] ...)
+
+;; Broadcast to all home page connections
+(dev/dispatch
+  [[:ascolais.sfere/broadcast
+    {:pattern [:ascolais.sfere/default-scope [:page :*]]}
+    [:ascolais.twk/patch-signals {:testSignal true}]
+    [:ascolais.twk/patch-elements
+     [:div#test-banner [:p "Hello from REPL!"]]
+     {:ascolais.twk/selector "#test-banner"
+      :ascolais.twk/patch-mode :ascolais.twk/pm-outer}]]])
+```
+
+For testing business logic without UI, extract pure functions and test those directly.
+
+---
+
+## Hypermedia-First Development
+
+This app uses Datastar's hypermedia approach: **the server drives UI state**.
+
+**Prefer server-driven updates:**
+- `::twk/patch-signals` - update client state from server
+- `::twk/patch-elements` - ship HTML fragments from server
+
+**Avoid client-side JavaScript:**
+- `::twk/execute-script` - only for things that MUST run client-side (clipboard, scroll, focus)
+- Don't use `execute-script` to modify signals - it can't access Datastar's signal context
+
+**Example - modal auto-dismiss:**
+```clojure
+;; WRONG - execute-script can't access signals
+[::twk/execute-script "setTimeout(() => { $showModal = false }, 1500)"]
+
+;; CORRECT - server sends signals when ready (e.g., after LLM responds)
+[::twk/patch-signals {:showModal false :hasResult true}]
+```
+
+The server decides WHEN to update UI. Let async operations (LLM calls, DB queries) complete, then send the appropriate signals/elements.
 
 ---
 
 ## Sandestin Effect System
 
 ### Registry Authoring
-
-A registry is a map with namespaced keys under `ascolais.sandestin`:
 
 ```clojure
 (require '[ascolais.sandestin :as s])
@@ -462,17 +444,16 @@ A registry is a map with namespaced keys under `ascolais.sandestin`:
 
 ### Effect Structure
 
-Effects are side-effecting operations:
+Effects are the boundary layer - they wrap external calls (databases, APIs, libraries) directly. **Don't dispatch other effects from within an effect handler** - call the library instead.
 
 ```clojure
 {::s/effects
  {:app/save-user
   {::s/description "Save user to database"
    ::s/schema [:tuple [:= :app/save-user] :map]
-   ::s/system-keys [:db]
-   ::s/handler (fn [{:keys [dispatch dispatch-data]} system user]
-                 (db/save! (:db system) user)
-                 {:saved true})}}}
+   ::s/handler (fn [{:keys [dispatch]} _system user]
+                 ;; Call library directly, not (dispatch [[::other-effect ...]])
+                 (db/save! datasource user))}}}
 ```
 
 ### Action Structure
@@ -492,11 +473,6 @@ Actions are pure functions that return effect vectors:
 ### Creating a Dispatch
 
 ```clojure
-(require '[ascolais.sandestin :as s]
-         '[ascolais.twk :as twk]
-         '[ascolais.sfere :as sfere]
-         '[ascolais.manse :as manse])
-
 (def dispatch
   (s/create-dispatch
     [(twk/registry)
@@ -508,17 +484,69 @@ Actions are pure functions that return effect vectors:
 ### Invoking a Dispatch
 
 ```clojure
-;; 1-arity: effects only
-(dispatch [[:app/log "hello"]])
+(dispatch [[:app/log "hello"]])                          ;; 1-arity: effects only
+(dispatch {:db connection} [[:app/save-user {:name "Alice"}]])  ;; 2-arity: system + effects
+(dispatch {:db conn} {:current-user {:id 1}} [[:app/greet]])    ;; 3-arity: + dispatch-data
+```
 
-;; 2-arity: system + effects
-(dispatch {:db connection}
-          [[:app/save-user {:name "Alice"}]])
+### Placeholder Structure
 
-;; 3-arity: system + dispatch-data + effects
-(dispatch {:db connection}
-          {:current-user {:id 1}}
-          [[:app/greet [:app/current-user]]])
+Placeholders enable continuations - they're interpolated when effects dispatch continuation effect vectors.
+
+```clojure
+{::s/placeholders
+ {::result
+  {::s/description "Access result in continuations. Self-preserving."
+   ::s/schema [:or [:tuple [:= ::result]] [:tuple [:= ::result] :keyword]]
+   ::s/handler
+   (fn [dispatch-data & [key]]
+     (if (contains? dispatch-data ::result)
+       (let [res (::result dispatch-data)]
+         (if key (get res key) res))
+       ;; Self-preserve if data not available yet
+       (if key [::result key] [::result])))}}}
+```
+
+**Key points:**
+- Handler receives `dispatch-data` (first arg to dispatch) plus optional args from the placeholder form
+- **Self-preservation:** Return the placeholder form itself if data isn't in dispatch-data yet
+- Schema validates the placeholder's usage forms (e.g., `[::result]` or `[::result :key]`)
+
+### Continuation Pattern
+
+**Use continuations for effects that produce results needed by subsequent effects.** This keeps route handlers pure - they return effect vectors without needing dispatch access.
+
+```clojure
+{::s/effects
+ {::generate
+  {::s/handler
+   (fn [{:keys [dispatch]} _ {:keys [options on-success on-error]}]
+     (try
+       (let [result (my-library/call options)]  ; Call library directly
+         (dispatch {::result result} on-success))
+       (catch Exception e
+         (when on-error
+           (dispatch {::error (ex-message e)} on-error)))))}}}
+
+;; Route handler stays pure - returns effect vector, no dispatch needed
+(defn my-handler [{:keys [signals]}]
+  {::twk/fx
+   [[::my/generate
+     {:options (:opts signals)
+      :on-success [[::twk/patch-elements (view [::my/result])]]
+      :on-error [[::twk/patch-elements [:div "Error"]]]}]]})
+```
+
+Dispatch interpolates `[::my/result]` using the placeholder handler with the provided dispatch-data.
+
+**Important:** Embed placeholders directly in data structures. Don't pass them to functions:
+
+```clojure
+;; WRONG - view-fn receives placeholder before interpolation, destructures to nils
+:on-success [[::twk/patch-elements (my-view-fn [::my/result])]]
+
+;; CORRECT - placeholder stays in hiccup, gets interpolated
+:on-success [[::twk/patch-elements [:my-component {:data [::my/result :field]}]]]
 ```
 
 ---
@@ -527,33 +555,17 @@ Actions are pure functions that return effect vectors:
 
 **Critical:** Use these functions to explore available effects, actions, and their schemas.
 
-### describe - List and inspect registered items
-
 ```clojure
-(s/describe dispatch)                    ;; List all items
-(s/describe dispatch :effects)           ;; List effects only
+(s/describe dispatch)                       ;; List all items
+(s/describe dispatch :effects)              ;; List effects only
 (s/describe dispatch ::twk/patch-elements)  ;; Inspect specific effect
-```
-
-### sample - Generate example invocations
-
-```clojure
-(s/sample dispatch ::twk/patch-elements)     ;; One sample
-(s/sample dispatch ::twk/patch-signals 3)    ;; Multiple samples
-```
-
-### grep - Search by pattern
-
-```clojure
-(s/grep dispatch "message")              ;; String search
-(s/grep dispatch #"broadcast|connection")  ;; Regex search
+(s/sample dispatch ::twk/patch-elements)    ;; Generate example invocation
+(s/grep dispatch "message")                 ;; Search by pattern
 ```
 
 ---
 
 ## Manse Database Effects
-
-### Available Effects
 
 | Effect | Purpose |
 |--------|---------|
@@ -561,19 +573,9 @@ Actions are pure functions that return effect vectors:
 | `::manse/execute-one` | Execute query, return first row |
 | `::manse/execute-one!` | Execute query, throw if no row |
 
-### Usage
-
 ```clojure
-;; In an effect handler
-(fn [{:keys [dispatch]} system query-params]
-  (dispatch
-    [[::manse/execute-one
-      ["SELECT * FROM users WHERE id = ?" user-id]]]))
-
-;; From action (returns effects)
 (fn [state user-id]
-  [[::manse/execute-one
-    ["SELECT * FROM users WHERE id = ?" user-id]]])
+  [[::manse/execute-one ["SELECT * FROM users WHERE id = ?" user-id]]])
 ```
 
 ---
@@ -589,109 +591,131 @@ Datastar is a lightweight frontend framework combining backend-driven reactivity
 3. **Attributes** - `data-*` attributes declare reactive behavior
 4. **Actions** - `@get()`, `@post()` send requests that return SSE
 
+### Gathering User Input
+
+**Signal-based** - Bind inputs to signals with `data-bind`. Values are sent automatically with `@post()`:
+```clojure
+[:input {:data-bind:email true :placeholder "Email"}]
+[:button {:data-on:click "@post('/api/subscribe')"} "Subscribe"]
+;; Handler reads from (:email signals)
+```
+
+**Form-based** - Use `{contentType: 'form'}` for traditional HTML form submission:
+```clojure
+[:form {:data-on:submit__prevent "@post('/api/submit', {contentType: 'form'})"}
+ [:input {:name "email"}]
+ [:button "Submit"]]
+;; Handler reads from (get form-params "email")
+```
+
+**Key difference:** Signals are NOT sent with `{contentType: 'form'}` requests. Choose form-based when you need native form features (validation, field grouping) or want to avoid signal synchronization complexity. Use hidden inputs if you need extra state with form submissions.
+
 ### Hypermedia-First Approach
 
-Datastar is hypermedia-focused. **The server owns data state** (lists, records, etc.) while **signals handle UI state** (open/closed, selected, hover, form inputs).
+**The server owns data state** (lists, records, etc.) while **signals handle UI state** (open/closed, selected, form inputs).
 
-**Use signals for UI interactions:**
 ```clojure
-;; Toggle visibility, selections, form state - all good
+;; Signals for UI interactions
 [:div {:data-signals:open "false"}
  [:button {:data-on:click "$open = !$open"} "Toggle"]
  [:div {:data-show "$open"} "Dropdown content"]]
 
-;; Form inputs with local validation
-[:input {:data-bind:email
-         :data-computed:valid "$email.includes('@')"}]
-```
-
-**Use server rendering for data:**
-```clojure
-;; AVOID: Client-side iteration over data
-[:div {:data-for "tag in $tags"} ...]
-
-;; PREFER: Server renders the list, patches via twk
+;; Server renders data, patches via twk (avoid client-side data-for)
 (defn render-tags [tags]
-  [:div#tags
-   (for [tag tags]
-     [:span.tag tag])])
-
-;; Action triggers server update, server patches new DOM
-[:button {:data-on:click "@post('/tags/add')"} "Add Tag"]
+  [:div#tags (for [tag tags] [:span.tag tag])])
 ```
 
-The DOM morph makes it practical to patch entire views for data changes, while signals keep UI responsive for interactions.
-
-### Signals
-
-```html
-<!-- Two-way binding -->
-<input data-bind:username />
-
-<!-- Direct initialization -->
-<div data-signals:count="0"></div>
-<div data-signals="{count: 0, user: {name: 'Alice'}}"></div>
-
-<!-- Derived signals -->
-<div data-computed:doubled="$count * 2"></div>
-```
+**Signal access**: Signals (`$signalName`) can only be read/written from within Datastar expressions (`data-*` attributes), **never from global JavaScript or `::twk/execute-script`**. Common mistakes:
+- `::twk/execute-script "setTimeout(() => { $mySignal = false }, 1000)"` — **won't work**, signals undefined in global JS
+- Instead, use `::twk/patch-signals` from server, or define a global function that accepts signal proxies and call it from a `data-on:*` expression
 
 ### Attribute Plugins
 
 | Attribute | Purpose | Example |
 |-----------|---------|---------|
-| `data-text` | Set text content | `<span data-text="$count"></span>` |
-| `data-show` | Toggle visibility | `<div data-show="$isVisible"></div>` |
-| `data-class` | Toggle CSS classes | `<div data-class:active="$isActive"></div>` |
-| `data-attr` | Set HTML attributes | `<button data-attr:disabled="$loading"></button>` |
-| `data-bind` | Two-way form binding | `<input data-bind:email />` |
-| `data-on` | Event handlers | `<button data-on:click="$count++"></button>` |
-
-### Event Handling
-
-```html
-<button data-on:click="$count++">Increment</button>
-<button data-on:click="@post('/api/save')">Save</button>
-<input data-on:input__debounce.300ms="@get('/search')" />
-```
-
-Use `evt` to access DOM event:
-```html
-<select data-on:change="@post('/api/update?value=' + evt.target.value)">
-```
+| `data-text` | Set text content | `[:span {:data-text "$count"}]` |
+| `data-show` | Toggle visibility | `[:div {:data-show "$isVisible"}]` |
+| `data-class` | Toggle CSS classes | `[:div {:data-class:active "$isActive"}]` |
+| `data-attr` | Set HTML attributes | `[:button {:data-attr:disabled "$loading"}]` |
+| `data-bind` | Two-way form binding | `[:input {:data-bind:email true}]` |
+| `data-on` | Event handlers | `[:button {:data-on:click "$count++"}]` |
 
 ### Event Modifiers
 
-Modifiers use **double underscore (`__`)** as delimiter. Dots (`.`) provide **arguments to modifiers**:
+Modifiers use **double underscore (`__`)** as delimiter. Dots (`.`) provide arguments:
 
-```html
-<!-- CORRECT: double underscore separates modifiers -->
-<div data-on:click__outside="$open = false">
-<input data-on:input__debounce.300ms="@get('/search')">
-<button data-on:click__once__prevent="handle()">
-
-<!-- WRONG: dot is for modifier args, not chaining -->
-<div data-on:click.outside="...">  <!-- This is incorrect! -->
-```
-
-**In Clojure hiccup**, use keyword syntax:
 ```clojure
 [:div {:data-on:click__outside "$open = false"}]
 [:input {:data-on:input__debounce.300ms "@get('/search')"}]
-[:button {:data-on:click__window__throttle.1s "handler()"}]
+[:button {:data-on:click__once__prevent "handle()"}]
 ```
 
-**Common modifiers:**
 | Modifier | Purpose |
 |----------|---------|
-| `__debounce.Nms` | Delay until idle (e.g., `__debounce.300ms`) |
-| `__throttle.Nms` | Rate limit (e.g., `__throttle.1s`) |
+| `__debounce.Nms` | Delay until idle |
+| `__throttle.Nms` | Rate limit |
 | `__outside` | Trigger when clicking outside element |
 | `__window` | Attach listener to window |
 | `__once` | Only trigger once |
 | `__prevent` | Call `preventDefault()` |
 | `__stop` | Call `stopPropagation()` |
-| `__capture` | Use capture phase |
+
+### Preventing FOUC (Flash of Unstyled Content)
+
+**CRITICAL:** Elements using `data-show` will flash visible before Datastar initializes. This is because `data-show` only sets `display: none` when false—it cannot override CSS.
+
+**Understanding `data-show` behavior:**
+- When expression is **false**: sets inline `style="display: none"`
+- When expression is **true**: **removes** inline style (does NOT set `display: block`)
+- Before Datastar runs: no inline style exists, so element is visible
+
+**Pattern 1: Inline style for initially-hidden elements**
+
+For elements that should start hidden (loading states, error states, etc.), add `style="display:none"` directly:
+
+```clojure
+;; WRONG - flashes visible before Datastar hides it
+[:div {:data-show "$isLoading"} "Loading..."]
+
+;; CORRECT - hidden immediately, Datastar takes over
+[:div {:style {:display "none"} :data-show "$isLoading"} "Loading..."]
+```
+
+**Pattern 2: CSS + data-class for modals/dropdowns**
+
+For modals and dropdowns, use CSS `display: none` by default with `data-class:is-shown`:
+
+```css
+.my-modal { display: none; }
+.my-modal.is-shown { display: flex; }
+```
+
+```clojure
+[:div.my-modal {"data-class:is-shown" "$showModal"} ...]
+```
+
+This works because `data-class` **adds** the class when true, and CSS `.is-shown` overrides the base `display: none`.
+
+**Pattern 3: Wait for SSE connection for auth-dependent UI**
+
+For elements that depend on server state (like auth), wait for `$connected` to avoid showing wrong state:
+
+```clojure
+;; WRONG - shows sign-in button briefly even when logged in
+[:div {:data-show "!$user"} [auth-button]]
+[:div {:data-show "$user"} [account-menu]]
+
+;; CORRECT - neither shows until SSE establishes actual state
+[:div {:style {:display "none"} :data-show "$connected && !$user"} [auth-button]]
+[:div {:style {:display "none"} :data-show "$connected && $user"} [account-menu]]
+```
+
+**Summary:**
+| Scenario | Solution |
+|----------|----------|
+| Element starts hidden, signal starts false | `{:style {:display "none"} :data-show "$signal"}` |
+| Modal/dropdown with toggle | CSS `display: none` + `data-class:is-shown` |
+| Depends on SSE state | Add `$connected &&` to expression |
 
 ---
 
@@ -701,27 +725,15 @@ Modifiers use **double underscore (`__`)** as delimiter. Dots (`.`) provide **ar
 
 Return hiccup data structures directly - TWK renders them automatically.
 
-**Important:** This is server-side hiccup (rendered to HTML), not Reagent. Use standard HTML tags only:
+**Important:** This is server-side hiccup, not Reagent. No `:<>` fragments:
 
 ```clojure
-;; CORRECT - standard HTML tags
+;; CORRECT
 [:div [:h1 "Hello"] [:p "World"]]
+[[:h1 "Hello"] [:p "World"]]  ;; nested vectors for siblings
 
-;; CORRECT - nested vectors for siblings
-[[:h1 "Hello"] [:p "World"]]
-
-;; WRONG - no React fragments (:<> is Reagent-specific)
+;; WRONG - no React fragments
 [:<> [:h1 "Hello"] [:p "World"]]
-```
-
-```clojure
-;; CORRECT - return hiccup directly
-{:body [:h1 "Hello"]}
-
-;; Datastar SSE response
-{:ascolais.twk/fx
- [[:ascolais.twk/patch-elements [:div "content"]]
-  [:ascolais.twk/patch-signals {:count 1}]]}
 ```
 
 ### Available TWK Effects
@@ -741,7 +753,7 @@ Return hiccup data structures directly - TWK renders them automatically.
 twk/pm-outer  twk/pm-inner  twk/pm-append  twk/pm-prepend
 twk/pm-before  twk/pm-after  twk/pm-remove
 
-[:ascolais.twk/patch-elements [:div "content"]
+[::twk/patch-elements [:div "content"]
  {twk/selector "#target" twk/patch-mode twk/pm-append}]
 ```
 
@@ -749,96 +761,23 @@ twk/pm-before  twk/pm-after  twk/pm-remove
 
 ## Sfere (Connection Management)
 
-### Creating a Store
-
 ```clojure
 ;; Development (in-memory)
 (def store (sfere/store {:type :atom}))
 
 ;; Production with TTL
 (def store (sfere/store {:type :caffeine :duration-ms 30000}))
-```
 
-### Broadcast Effect
-
-```clojure
 ;; Broadcast to pattern (uses :* wildcards)
 [[:ascolais.sfere/broadcast {:pattern [:* [:room "lobby" :*]]}
-  [:ascolais.twk/patch-elements [:div "announcement"]]]]
-
-;; Pattern matching
-[:* [:room "lobby" :*]]    ;; All users in "lobby"
-[:* [:room :* :*]]         ;; All users in any room
-[:* :*]                    ;; All connections
+  [::twk/patch-elements [:div "announcement"]]]]
 ```
 
 ---
 
-## Kaiin (Declarative Routing)
+## SSE Route Handlers
 
-### Registry with Kaiin Metadata
-
-```clojure
-{::s/actions
- {:room/send-message
-  {::s/description "Send a message to a room"
-   ::s/schema [:tuple [:= :room/send-message] :string :string :string]
-   ::s/handler (fn [_state room-id username message]
-                 [[:ascolais.twk/patch-elements
-                   [:div.message [:strong username] ": " message]
-                   {twk/selector "#messages" twk/patch-mode twk/pm-append}]])
-
-   ;; Kaiin metadata
-   ::kaiin/path "/room/:room-id/message"
-   ::kaiin/method :post
-   ::kaiin/signals [:map [:username :string] [:message :string]]
-   ::kaiin/dispatch [:room/send-message
-                     [::kaiin/path-param :room-id]
-                     [::kaiin/signal :username]
-                     [::kaiin/signal :message]]
-   ::kaiin/target [:* [:room [::kaiin/path-param :room-id] :*]]}}}
-```
-
-### Generating Routes
-
-```clojure
-(require '[ascolais.kaiin :as kaiin])
-
-;; Generate routes from dispatch
-(kaiin/routes dispatch)
-
-;; Combine with custom routes
-(def router
-  (rr/router
-    (into custom-routes (kaiin/routes dispatch))
-    {:data {:middleware [(twk/with-datastar adapter dispatch)]}}))
-```
-
-### Kaiin vs Manual Routes
-
-**Use Kaiin** for stateless request/response handlers:
-- Form submissions
-- API endpoints that return data
-- Actions that dispatch effects and close
-
-Kaiin routes:
-1. Parse signals and path params from request
-2. Dispatch effects via sandestin
-3. Relay effects to sfere targets (if `::kaiin/target` specified)
-4. Close the connection
-
-**Use Manual Handlers** for persistent SSE connections:
-- Real-time updates
-- Live dashboards
-- Chat/collaboration features
-- Any page that receives server-pushed updates
-
-Manual SSE handlers:
-1. Return `::sfere/key` to store the connection
-2. Return `::twk/fx` for initial effects to send
-3. Connection stays open for broadcasts
-
-Example manual SSE handler:
+For persistent SSE connections (real-time updates, live dashboards, chat), use manual handlers that return `::sfere/key` to store the connection:
 
 ```clojure
 (defn sse-connect
@@ -849,236 +788,142 @@ Example manual SSE handler:
      ::twk/fx [[::twk/patch-signals {:connected true}]]}))
 ```
 
-Route definition (NOT using kaiin metadata):
+Route definition:
 
 ```clojure
 ["/sse/home" {:get {:handler sse-connect}}]
 ```
 
-Kaiin's `::kaiin/target` broadcasts to stored connections but does NOT keep the originating connection open.
+SSE handlers:
+1. Return `::sfere/key` to store the connection
+2. Return `::twk/fx` for initial effects to send
+3. Connection stays open for broadcasts
+
+---
+
+## Static Page Routes
+
+For routes needing synchronous data access (e.g., server-rendered pages with OG meta tags), access dispatch from reitit match data:
+
+```clojure
+(defn my-handler [request]
+  (let [dispatch (-> request :reitit.core/match :data :dispatch)
+        result (dispatch [[::manse/execute-one ["SELECT * FROM foo WHERE id = ?" id]]])
+        data (-> result :results first :res)]
+    {:body (my-view data)}))
+```
+
+Dispatch is available because it's added to the router's `:data` map in `config.clj`. This pattern is useful when the page needs data before rendering (not suitable for SSE streaming).
 
 ---
 
 ## Effect Organization
-
-### Pattern
 
 Each domain gets its own namespace in `fx/` exporting a `registry` function:
 
 ```clojure
 (ns {{top/ns}}.fx.users
   (:require [ascolais.sandestin :as s]
-            [ascolais.manse :as manse]
-            [ascolais.twk :as twk]
-            [ascolais.kaiin :as kaiin]))
+            [ascolais.manse :as manse]))
 
-(defn registry
-  "User management effects."
-  [{:keys [datasource]}]
+(defn registry [{:keys [datasource]}]
   {::s/effects
    {::create-user
     {::s/description "Create a new user in the database."
      ::s/schema [:tuple [:= ::create-user] [:map [:email :string] [:name :string]]]
-     ::s/handler
-     (fn [{:keys [dispatch]} _system user-data]
-       (dispatch
-         [[::manse/execute-one
-           ["INSERT INTO users (email, name) VALUES (?, ?) RETURNING *"
-            (:email user-data) (:name user-data)]]]))}}})
+     ::s/handler (fn [{:keys [dispatch]} _system user-data]
+                   (dispatch [[::manse/execute-one
+                               ["INSERT INTO users (email, name) VALUES (?, ?) RETURNING *"
+                                (:email user-data) (:name user-data)]]]))}}})
 ```
 
-### Conventions
-
-- **One registry per domain** - `fx/users.clj`, `fx/orders.clj`, etc.
-- **Registry function takes deps** - `(defn registry [{:keys [datasource]}])`
-- **Namespaced effect keys** - `::users/create-user` not `:create-user`
-- **Descriptions always** - Every effect/action has `::s/description`
+**Conventions:** One registry per domain, namespaced effect keys, descriptions always.
 
 ---
 
 ## Adding Dependencies
 
-When adding new dependencies in a REPL-connected environment:
+```clojure
+;; Add to running REPL first, then add to deps.edn once confirmed
+(clojure.repl.deps/add-lib 'metosin/malli {:mvn/version "0.20.0"})
+```
 
-1. **Add to the running REPL first**:
-   ```clojure
-   (clojure.repl.deps/add-lib 'metosin/malli {:mvn/version "0.20.0"})
-   ```
+---
 
-2. **Confirm the dependency works** in the REPL.
+## Secrets Management
 
-3. **Add to deps.edn** once confirmed working.
+Secrets via `.env` file in development, environment variables in production.
+
+| File | Purpose | Committed? |
+|------|---------|------------|
+| `.env` | Local development secrets | No (gitignored) |
+| `.env.example` | Template showing required secrets | Yes |
+
+**Adding a new secret:**
+1. Add placeholder to `.env.example`
+2. Add real value to `.env`
+3. Use in `config.clj`: `(get secrets "NEW_SERVICE_API_KEY")`
+4. Run `(restart)` in REPL
+
+| Secret | Purpose |
+|--------|---------|
+| `ANTHROPIC_API_KEY` | Claude API access |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `SESSION_SECRET` | 16-character key for session encryption |
+
+### Production OAuth Setup
+
+**Google Cloud Console Configuration:**
+
+1. Create a project at [console.cloud.google.com](https://console.cloud.google.com)
+2. Enable the Google+ API (for user profile access)
+3. Configure OAuth consent screen:
+   - User type: External
+   - App name, logo, support email
+   - Scopes: `openid`, `email`, `profile`
+4. Create OAuth 2.0 credentials:
+   - Application type: Web application
+   - Authorized redirect URIs: `https://your-domain.com/auth/callback`
+   - Copy Client ID and Client Secret
+
+**Environment Variables:**
+
+```bash
+GOOGLE_CLIENT_ID=123456789-xxxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxx
+SESSION_SECRET=exactly16chars!!  # Generate: openssl rand -base64 12 | head -c 16
+```
+
+**CSRF Protection:**
+
+The OAuth flow uses a cryptographically random state parameter stored in the session. This prevents CSRF attacks by validating that the callback state matches what was sent in the initial request.
+
+**Security Checklist:**
+
+- [ ] SESSION_SECRET is set (not the default from .env.example)
+- [ ] HTTPS is enforced (required for secure cookies)
+- [ ] OAuth redirect URI matches exactly (no trailing slashes)
+- [ ] Google OAuth consent screen is verified (for production)
+
+---
+
+## Accessibility
+
+Accessibility is a requirement, not a nice-to-have:
+- Use semantic HTML elements (button, nav, main, etc.)
+- Include aria-live for dynamic content updates
+- Ensure keyboard navigation works
+- Provide alt text for images
 
 ---
 
 ## Component Styling Conventions
 
-### Development Workflow
-
 1. **Exploration phase** - Use inline styles for rapid iteration
 2. **Before commit** - Extract all styles to `resources/public/styles.css`
-3. **Commit** - Component hiccup should use CSS classes, not inline styles
-
-### Naming Convention (BEM-like)
-
-```css
-.component-name { }
-.component-name-element { }
-.component-name--modifier { }
-```
-
-### Theme Support
-
-Use CSS custom properties:
-
-```css
-.my-component {
-  background: var(--bg-primary);
-  color: var(--accent-cyan);
-}
-```
-
----
-
-## File Organization Patterns
-
-As projects grow, the monolithic component and CSS files may need splitting. The patterns below maintain full compatibility with tsain sandbox workflow.
-
-### Component Splitting (Barrel File Pattern)
-
-When `components.clj` exceeds ~1500 lines, split by domain using a barrel file:
-
-**Directory structure:**
-```
-src/clj/{{top/file}}/views/
-├── components.clj              # Barrel file - requires all sub-modules
-└── components/
-    ├── buttons.clj             # Button, IconButton, ButtonGroup
-    ├── forms.clj               # Input, Select, Checkbox, Radio, Toggle
-    ├── feedback.clj            # Toast, Alert, Progress, Skeleton
-    ├── overlays.clj            # Modal, Drawer, Popover, Tooltip, CommandPalette
-    ├── navigation.clj          # Tabs, Breadcrumb, Pagination, Stepper
-    └── data_display.clj        # Table, Card, Badge, Avatar, Timeline
-```
-
-**Barrel file (`components.clj`):**
-```clojure
-(ns {{top/ns}}.views.components
-  "Barrel file - requires component modules to register their aliases.
-   Tsain uses this namespace; defmethod is global so aliases work."
-  (:require [{{top/ns}}.views.components.buttons]
-            [{{top/ns}}.views.components.forms]
-            [{{top/ns}}.views.components.feedback]
-            [{{top/ns}}.views.components.overlays]
-            [{{top/ns}}.views.components.navigation]
-            [{{top/ns}}.views.components.data-display]))
-```
-
-**Sub-module example (`components/buttons.clj`):**
-```clojure
-(ns {{top/ns}}.views.components.buttons
-  (:require [dev.onionpancakes.chassis.core :as c]
-            [{{top/ns}}.views.icons :as icons]))
-
-(defmethod c/resolve-alias :{{top/ns}}.views.components/button
-  [_ attrs _]
-  ;; Note: alias keyword uses parent namespace, not this one
-  ...)
-
-(defmethod c/resolve-alias :{{top/ns}}.views.components/icon-button
-  [_ attrs _]
-  ...)
-```
-
-**Key points:**
-- Alias keywords use the parent namespace (`:{{top/ns}}.views.components/button`), not the sub-module namespace
-- `defmethod` is global - aliases register when the namespace loads
-- Tsain config unchanged: `:ui-namespace {{top/ns}}.views.components`
-- `(reload)` loads all required namespaces automatically
-
-### CSS Splitting
-
-Use `@import` statements in the main stylesheet:
-
-**Directory structure:**
-```
-resources/public/
-├── styles.css                  # Entry point with @imports
-└── styles/
-    ├── variables.css           # CSS custom properties
-    ├── utilities.css           # Utility classes
-    ├── buttons.css
-    ├── forms.css
-    ├── overlays.css
-    └── ...
-```
-
-**Entry point (`styles.css`):**
-```css
-/* CSS Variables and Base */
-@import 'styles/variables.css';
-@import 'styles/utilities.css';
-
-/* Components */
-@import 'styles/buttons.css';
-@import 'styles/forms.css';
-@import 'styles/feedback.css';
-@import 'styles/overlays.css';
-@import 'styles/navigation.css';
-@import 'styles/data-display.css';
-```
-
-**Key points:**
-- Tsain watches `styles.css` - changes to imported files trigger reload
-- Keep variable definitions in a shared file imported first
-- Component CSS files should be self-contained (no cross-dependencies)
-
-### When to Split
-
-Consider splitting when:
-- `components.clj` exceeds ~1500 lines
-- `styles.css` exceeds ~3000 lines
-- Multiple logically distinct component domains exist
-- Finding/editing specific components becomes slow
-
-Don't split prematurely - the monolithic structure is simpler for smaller projects.
-
----
-
-## Chassis Alias Conventions
-
-Component structure lives in `src/clj/{{top/file}}/views/components.clj` as chassis aliases using `html.yeah/defelem`.
-
-### Alias-First Development
-
-```clojure
-;; 1. Define component with schema in views/components.clj
-(hy/defelem my-card
-  [:map {:doc "A card with title and subtitle"
-         :my-card/keys [title subtitle]}
-   [:my-card/title :string]
-   [:my-card/subtitle {:optional true} :string]]
-  [:div.my-card attrs
-   [:h3.my-card-title my-card/title]
-   (when my-card/subtitle
-     [:p.my-card-subtitle my-card/subtitle])])
-
-;; 2. Use in views or commit to tsain library
-[:{{top/ns}}.views.components/my-card
- {:my-card/title "Hello World"
-  :my-card/subtitle "A description"}]
-```
-
-### Namespaced Attributes
-
-Chassis elides namespaced attributes from HTML. Use for config props:
-
-```clojure
-[:{{top/ns}}.views.components/game-card
- {:game-card/title "Title"     ;; Config (elided)
-  :data-on:click "..."         ;; HTML attr (kept)
-  :class "highlighted"}]       ;; HTML attr (kept)
-```
+3. Use BEM-like naming: `.component-name`, `.component-name-element`, `.component-name--modifier`
+4. Use CSS custom properties: `var(--bg-primary)`, `var(--accent-cyan)`
 
 ---
 
@@ -1087,30 +932,4 @@ Chassis elides namespaced attributes from HTML. Use for config props:
 - Follow standard Clojure conventions
 - Use `cljfmt` formatting (applied automatically via hooks)
 - Prefer pure functions where possible
-- Use `tap>` for debugging output (appears in Portal)
-
-### Namespaced Keywords
-
-```clojure
-;; Single colon - explicit namespace
-:my.app.config/timeout
-
-;; Double colon - auto-resolved to current namespace
-::key  ; becomes :my.current.ns/key
-
-;; With alias
-(require '[my.app.db :as db])
-::db/query  ; becomes :my.app.db/query
-```
-
-## Git Commits
-
-Use conventional commits format:
-
-```
-<type>: <description>
-
-[optional body]
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+- Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`

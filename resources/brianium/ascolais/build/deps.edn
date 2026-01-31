@@ -7,7 +7,6 @@
   io.github.brianium/sandestin {:git/tag "v0.6.0" :git/sha "5888508"}
   io.github.brianium/twk {:git/tag "v0.2.1" :git/sha "e3c5011"}
   io.github.brianium/sfere {:git/tag "v0.6.0" :git/sha "2114511"}
-  io.github.brianium/kaiin {:git/tag "v0.1.0" :git/sha "088a6af"}
   io.github.brianium/manse {:git/tag "v0.2.0" :git/sha "2f29123"}
 
   ;; Web
@@ -26,7 +25,8 @@
 
   ;; Utilities
   metosin/malli {:mvn/version "0.20.0"}
-  dev.onionpancakes/chassis {:mvn/version "1.0.365"}}
+  dev.onionpancakes/chassis {:mvn/version "1.0.365"}
+  cnuernber/charred {:mvn/version "1.047"}}
 
  :aliases
  {:dev

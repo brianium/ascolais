@@ -27,7 +27,7 @@
 
 (defn start
   "Start the development system."
-  ([] (start config/config))
+  ([] (start (config/config)))
   ([config]
    (alter-var-root #'*system* (constantly (ig/init config)))
    (tap> {:event :system/started :keys (keys *system*)})

@@ -59,7 +59,17 @@
      [:li [:strong "sandestin"] " - Effect dispatch with schema-driven discoverability"]
      [:li [:strong "twk"] " - Datastar SSE integration"]
      [:li [:strong "sfere"] " - Connection management and broadcasting"]
-     [:li [:strong "kaiin"] " - Declarative HTTP routing from registry metadata"]
      [:li [:strong "manse"] " - Database effects with next.jdbc"]
      [:li [:strong "tsain"] " - Component development sandbox"]]
     [:p [:a {:href "/"} "Back to home"]]))
+
+(defn auth-error-page
+  "Auth error page view."
+  [error-type error-message]
+  (base-layout {:title "Authentication Error - {{name}}"}
+    [:h1 "Authentication Error"]
+    [:p (case error-type
+          :denied "You denied the authentication request."
+          :invalid (str "Invalid authentication: " error-message)
+          (str "An error occurred: " error-message))]
+    [:p [:a {:href "/"} "Return home"]]))

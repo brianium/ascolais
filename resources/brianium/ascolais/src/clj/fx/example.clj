@@ -2,8 +2,7 @@
   "Example domain effects."
   (:require [ascolais.sandestin :as s]
             [ascolais.twk :as twk]
-            [ascolais.sfere :as sfere]
-            [ascolais.kaiin :as kaiin]))
+            [ascolais.sfere :as sfere]))
 
 (defn registry
   "Example effects registry."
@@ -19,13 +18,7 @@
          [::twk/patch-elements
           [:div#greeting.greeting
            [:h2 "Hello, " name "!"]
-           [:p "Welcome to {{name}}"]]]]])
-
-     ;; Kaiin metadata - generates POST /api/greet
-     ::kaiin/path "/api/greet"
-     ::kaiin/method :post
-     ::kaiin/signals [:map [:name :string]]
-     ::kaiin/dispatch [::greet [::kaiin/signal :name]]}}
+           [:p "Welcome to {{name}}"]]]]])}}
 
    ::s/effects
    {::log
@@ -35,4 +28,3 @@
      (fn [_ctx _system message]
        (println "[{{name}}]" message)
        nil)}}})
-

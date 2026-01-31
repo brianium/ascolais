@@ -62,9 +62,12 @@
 ;; Dev Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def config
+(defn config
+  "Build dev system configuration.
+   Extends app config with dev-only components."
+  []
   (merge
-    app/config
+    (app/config)
 
     ;; Add dev-only components
     {::tsain-registry {}
